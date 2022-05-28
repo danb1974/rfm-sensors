@@ -7,7 +7,8 @@ Sensor sensor;
 
 void flashLed(uint8_t count)
 {
-    for (uint8_t i = 0; i < count; i++) {
+    for (uint8_t i = 0; i < count; i++)
+    {
         digitalWrite(PIN_LED, HIGH);
         delay(100);
         digitalWrite(PIN_LED, LOW);
