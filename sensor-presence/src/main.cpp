@@ -3,10 +3,22 @@
 #include "MAX44009.h"
 #include <Wire.h>
 
+#define PIN_LED 9
 #define PIN_INPUT 3
 
 MAX44009 max44009;
 Sensor sensor(false);
+
+void flashLed(uint8_t count)
+{
+    for (uint8_t i = 0; i < count; i++)
+    {
+        digitalWrite(PIN_LED, HIGH);
+        delay(100);
+        digitalWrite(PIN_LED, LOW);
+        delay(100);
+    }
+}
 
 void inputStateChanged()
 {
@@ -15,7 +27,16 @@ void inputStateChanged()
 
 void setup()
 {
+    // settle
+    sensor.sleep(5);
+
+    // signal start of setup
+    pinMode(PIN_LED, OUTPUT);
+    flashLed(1);
+    sensor.sleep(1);
+
     pinMode(PIN_INPUT, INPUT);
+
     digitalWrite(A4, HIGH);
     digitalWrite(A5, HIGH);
     Wire.begin();
@@ -23,12 +44,17 @@ void setup()
     sensor.init();
     if (!max44009.initialize())
     {
+        // signal max44009 error
+        flashLed(10);
         sensor.powerDown();
         while (1)
         {
             sensor.sleep(10000);
         }
     }
+
+    // signal end of setup
+    flashLed(3);
 }
 
 void loop()
@@ -49,7 +75,7 @@ void loop()
     sensor.powerDown();
     sensor.sleep(10);
 
-    EIFR = 0x03; //clear INT0/INT1
+    EIFR = 0x03; // clear INT0/INT1
     attachInterrupt(digitalPinToInterrupt(PIN_INPUT), inputStateChanged, RISING);
     sensor.sleep(1800); // 30 min
     detachInterrupt(digitalPinToInterrupt(PIN_INPUT));
