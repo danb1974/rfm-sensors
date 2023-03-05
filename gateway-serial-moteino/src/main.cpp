@@ -142,17 +142,13 @@ void handleSerialData()
 	static uint32_t last;
 
 	if (!Serial.available())
-	{
 		return;
-	}
 
 	uint8_t data = Serial.read();
 
 	uint32_t now = millis();
 	if (now - last > 300)
-	{
 		status = RxStatus::Idle;
-	}
 	last = now;
 
 	switch (status)
@@ -210,9 +206,7 @@ void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t si
 	packet[3] = head;
 	packet[4] = from;
 	if (size)
-	{
 		memcpy(&packet[5], data, size);
-	}
 
 	uint16_t checksum = getChecksum(&packet[2], size + 3);
 	packet[5 + size] = checksum >> 8;
@@ -260,9 +254,6 @@ bool inited = false;
 
 void radioInterrupt()
 {
-	if (!inited)
-		return;
-
 	RfmPacket packet;
 	while (radio.receive(packet))
 	{
@@ -460,8 +451,6 @@ void setup()
 	delay(5000);
 	flashLed(1);
 
-	Serial.begin(SERIAL_RATE);
-
 	for (uint8_t i = 0; i < SENSORS; i++)
 	{
 		sensors[i].oldReceiveNonce = createNonce();
@@ -472,14 +461,13 @@ void setup()
 	inited = radio.initialize(RF69_433MHZ, 1, 1, true);
 	if (!inited)
 	{
+		flashLed(10);
 		while (1)
-		{
-			flashLed(1);
-			delay(1);
-		}
+			delay(10000);
 	}
+ß	attachInterrupt(0, radioInterrupt, RISING);
 
-	attachInterrupt(0, radioInterrupt, RISING);
+	Serial.begin(SERIAL_RATE);
 	serialSendFrame(FRAME_INIT, 0, NULL, 0);
 
 	flashLed(3);
