@@ -47,9 +47,9 @@ typedef enum
 static SensorState sensors[SENSORS];
 
 #define RADIO_QUEUE_SIZE 5
-static RfmPacket radioQueue[RADIO_QUEUE_SIZE];
-static volatile uint8_t radioTail = 0, radioCount = 0;
-static uint8_t radioHead = 0;
+static RfmPacket radioRxQueue[RADIO_QUEUE_SIZE];
+static volatile uint8_t radioRxTail = 0, radioRxCount = 0;
+static uint8_t radioRxHead = 0;
 
 uint32_t lastSendTime;
 uint8_t sendBuffer[RF69_MAX_DATA_LEN], sendSize, sendRetries;
@@ -255,14 +255,14 @@ void radioInterrupt()
 	RfmPacket packet;
 	while (radio.receive(packet))
 	{
-		if (packet.from < MIN_ADDR || packet.from > MAX_ADDR || radioCount == RADIO_QUEUE_SIZE)
+		if (packet.from < MIN_ADDR || packet.from > MAX_ADDR || radioRxCount == RADIO_QUEUE_SIZE)
 			continue;
 
-		radioQueue[radioTail] = packet;
+		radioRxQueue[radioRxTail] = packet;
 
-		radioCount++;
-		if (++radioTail == RADIO_QUEUE_SIZE)
-			radioTail = 0;
+		radioRxCount++;
+		if (++radioRxTail == RADIO_QUEUE_SIZE)
+			radioRxTail = 0;
 	}
 }
 
@@ -476,14 +476,14 @@ void loop()
 {
 	handleSerialData();
 
-	while (radioCount != 0)
+	while (radioRxCount != 0)
 	{
-		RfmPacket &rx = radioQueue[radioHead];
+		RfmPacket &rx = radioRxQueue[radioRxHead];
 		onRadioPacketReceived(rx);
 		noInterrupts();
-		radioCount--;
-		if (++radioHead == RADIO_QUEUE_SIZE)
-			radioHead = 0;
+		radioRxCount--;
+		if (++radioRxHead == RADIO_QUEUE_SIZE)
+			radioRxHead = 0;
 		interrupts();
 	}
 
