@@ -141,59 +141,59 @@ void handleSerialData()
 	static uint16_t chksum, rxChksum;
 	static uint32_t last;
 
-	if (!Serial.available())
-		return;
-
-	uint8_t data = Serial.read();
-
-	uint32_t now = millis();
-	if (now - last > 300)
-		status = RxStatus::Idle;
-	last = now;
-
-	switch (status)
+	while (Serial.available())
 	{
-	case RxStatus::Idle:
-		if (data == FRAME_HEADER_1)
-			status = RxStatus::Hdr;
-		break;
-	case RxStatus::Hdr:
-		status = data == FRAME_HEADER_2 ? RxStatus::Size : RxStatus::Idle;
-		break;
-	case RxStatus::Size:
-		if (serialRxCount == SERIAL_RX_QUEUE_SIZE || data > RX_PACKET_SIZE)
+		uint8_t data = Serial.read();
+
+		uint32_t now = millis();
+		if (now - last > 300)
+			status = RxStatus::Idle;
+		last = now;
+
+		switch (status)
 		{
+		case RxStatus::Idle:
+			if (data == FRAME_HEADER_1)
+				status = RxStatus::Hdr;
+			break;
+		case RxStatus::Hdr:
+			status = data == FRAME_HEADER_2 ? RxStatus::Size : RxStatus::Idle;
+			break;
+		case RxStatus::Size:
+			if (serialRxCount == SERIAL_RX_QUEUE_SIZE || data > RX_PACKET_SIZE)
+			{
+				status = RxStatus::Idle;
+				break;
+			}
+			serialRxQueue[serialRxTail].size = data;
+			status = RxStatus::Payload;
+			chksum = CHKSUM_INIT;
+			offset = 0;
+			updateChecksum(&chksum, data);
+			break;
+		case RxStatus::Payload:
+			updateChecksum(&chksum, data);
+			serialRxQueue[serialRxTail].data[offset++] = data;
+			if (offset == serialRxQueue[serialRxTail].size)
+				status = RxStatus::Chk1;
+			break;
+		case RxStatus::Chk1:
+			rxChksum = data << 8;
+			status = RxStatus::Chk2;
+			break;
+		case RxStatus::Chk2:
+			rxChksum |= data;
+			if (chksum == rxChksum)
+			{
+				noInterrupts();
+				if (++serialRxTail == SERIAL_RX_QUEUE_SIZE)
+					serialRxTail = 0;
+				serialRxCount++;
+				interrupts();
+			}
 			status = RxStatus::Idle;
 			break;
 		}
-		serialRxQueue[serialRxTail].size = data;
-		status = RxStatus::Payload;
-		chksum = CHKSUM_INIT;
-		offset = 0;
-		updateChecksum(&chksum, data);
-		break;
-	case RxStatus::Payload:
-		updateChecksum(&chksum, data);
-		serialRxQueue[serialRxTail].data[offset++] = data;
-		if (offset == serialRxQueue[serialRxTail].size)
-			status = RxStatus::Chk1;
-		break;
-	case RxStatus::Chk1:
-		rxChksum = data << 8;
-		status = RxStatus::Chk2;
-		break;
-	case RxStatus::Chk2:
-		rxChksum |= data;
-		if (chksum == rxChksum)
-		{
-			noInterrupts();
-			if (++serialRxTail == SERIAL_RX_QUEUE_SIZE)
-				serialRxTail = 0;
-			serialRxCount++;
-			interrupts();
-		}
-		status = RxStatus::Idle;
-		break;
 	}
 }
 
@@ -249,8 +249,6 @@ uint32_t createNonce()
 }
 
 //-----------------------------------------------------------------------------
-
-bool inited = false;
 
 void radioInterrupt()
 {
@@ -458,14 +456,13 @@ void setup()
 		sensors[i].nextSendNonce = createNonce();
 	}
 
-	inited = radio.initialize(RF69_433MHZ, 1, 1, true);
-	if (!inited)
+	if (!radio.initialize(RF69_433MHZ, 1, 1, true))
 	{
 		flashLed(10);
 		while (1)
 			delay(10000);
 	}
-ß	attachInterrupt(0, radioInterrupt, RISING);
+	attachInterrupt(0, radioInterrupt, RISING);
 
 	Serial.begin(SERIAL_RATE);
 	serialSendFrame(FRAME_INIT, 0, NULL, 0);
