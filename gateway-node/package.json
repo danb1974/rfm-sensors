@@ -1,12 +1,14 @@
 {
-  "name": "gateway-node",
-  "version": "1.0.0",
+  "name": "@danb1974/gateway-node",
+  "version": "1.0.4",
   "description": "",
   "main": "index.js",
   "scripts": {
     "lint": "tslint -p .",
-    "build": "tsc && cp src/nodes/*.html dist/nodes -v",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc && cp -v src/nodes/*.html dist/nodes/",
+    "clean": "rm -rf dist/",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "pub": "npm run clean && npm run build && npm publish --access=public"
   },
   "author": "",
   "license": "ISC",
