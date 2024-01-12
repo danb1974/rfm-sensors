@@ -1,9 +1,12 @@
 #### sensor-door
 
 ##### outgoing
+
+```
 'B', b, 'S', s
 b = voltage / 10 - 100
 s = !input or 0xFF
+```
 
 ---
 
@@ -11,28 +14,42 @@ s = !input or 0xFF
 
 ##### outgoing
 
-init: 0x01
+```
+0x01 (init)
+```
 
-state: 0x02, b
+```
+0x02, b (send state)
 b = brightness
+```
 
 ##### incoming
 
+```
 0x01, b (set brightness)
 b = brightness
+```
 
+```
 0x02 (send state)
+```
 
+```
 0x03, m, b (set mode)
 m = mode
 b = modeNoDimmerBrightness
+```
 
+```
 0x04, b (set led brighness)
 b = ledbrightness
+```
 
+```
 0x05, b, r (activate min brightness)
 b = minBrightness
 r = minBrightnessReset (seconds)
+```
 
 ---
 
@@ -40,10 +57,12 @@ r = minBrightnessReset (seconds)
 
 ##### outgoing
 
+```
 'B', b, 'L', ll, 'S', s
 b = voltage / 10 - 100
 ll = light (MSB LSB)
 s = input
+```
 
 ---
 
@@ -51,11 +70,13 @@ s = input
 
 ##### outgoing
 
+```
 0x01, tt, hh, pp, b
 tt = temperature
 hh = humidity
 pp = pressure
 b = voltage / 10 - 100
+```
 
 ---
 
@@ -63,14 +84,18 @@ b = voltage / 10 - 100
 
 ##### outgoing
 
+```
 'B', b
 b = voltage / 10 - 100
+```
 
 ##### incoming
 
+```
 0xde v tt
 v = valve percent
 tt = displayed temperature
+```
 
 ---
 
@@ -89,8 +114,10 @@ tt = displayed temperature
 ##### FRAME_CONFIGURE
 
 (params may come in any order and combination)
+```
 K kkkkkkkkkkkkkkkk - encryption key (16 bytes)
 F ff - frequency
 N n - address (node ID / on old version it was network ID)
 P p - power level
 R rr - random seed
+```
