@@ -102,7 +102,8 @@ tt = displayed temperature
 #### radio gateway
 
 ##### frame types
-
+| Frame type | Frame id |
+|-----------------|------|
 | FRAME_CONFIGURE | 0x90 |
 | FRAME_CONFIGURED | 0x91 |
 | FRAME_SENDPACKET | 0x92 |
