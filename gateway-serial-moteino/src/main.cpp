@@ -446,7 +446,7 @@ void onRadioPacketReceived(RfmPacket &packet)
 
 void setup()
 {
-	delay(5000);
+	delay(3000);
 	flashLed(1);
 
 	for (uint8_t i = 0; i < SENSORS; i++)
@@ -466,11 +466,12 @@ void setup()
 
 	Serial.begin(SERIAL_RATE);
 	serialSendFrame(FRAME_INIT, 0, NULL, 0);
-
-	flashLed(3);
 }
 
 //-----------------------------------------------------------------------------
+
+static bool ledOn = false;
+static uint32_t lastLedOn = millis();
 
 void loop()
 {
@@ -478,6 +479,7 @@ void loop()
 
 	while (radioRxCount != 0)
 	{
+		lastLedOn = millis();
 		RfmPacket &rx = radioRxQueue[radioRxHead];
 		onRadioPacketReceived(rx);
 		noInterrupts();
@@ -489,6 +491,7 @@ void loop()
 
 	while (serialRxCount != 0)
 	{
+		lastLedOn = millis();
 		RxSerial &rx = serialRxQueue[serialRxHead];
 		onSerialPacketReceived(rx.data, rx.size);
 		noInterrupts();
@@ -508,7 +511,19 @@ void loop()
 		}
 		else
 		{
+			lastLedOn = millis();
 			sendRadioNow();
 		}
+	}
+
+	if (ledOn && millis() - lastLedOn > 100)
+	{
+		ledOn = false;
+		digitalWrite(PIN_LED, LOW);
+	}
+	else if (!ledOn && millis() - lastLedOn <= 100)
+	{
+		ledOn = true;
+		digitalWrite(PIN_LED, HIGH);
 	}
 }
