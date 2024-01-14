@@ -27,6 +27,7 @@
 
 #define SEND_RETRIES 5
 #define RETRY_INTERVAL 200
+#define RETRY_INTERVAL_FUZZ 100
 
 typedef struct
 {
@@ -111,14 +112,21 @@ RFM69 radio(spiTransfer, millis);
 
 //-----------------------------------------------------------------------------
 
+static bool ledIsOn = false;
+static uint32_t ledIsOnSince = 0;
+
 void ledOn()
 {
 	digitalWrite(PIN_LED, HIGH);
+	ledIsOn = true;
+	ledIsOnSince = millis();
 }
 
 void ledOff()
 {
 	digitalWrite(PIN_LED, LOW);
+	ledIsOn = false;
+	ledIsOnSince = 0;
 }
 
 void flashLed(uint8_t count, uint16_t delayms = 100)
@@ -132,6 +140,17 @@ void flashLed(uint8_t count, uint16_t delayms = 100)
 		if (delayms > 0)
 			delay(delayms);
 	}
+}
+
+void ledStartPulse()
+{
+	ledOn();
+}
+
+void ledCheckStopPulse()
+{
+	if (ledIsOn && millis() - ledIsOnSince > 20)
+		ledOff();
 }
 
 //-----------------------------------------------------------------------------
@@ -160,14 +179,10 @@ void handleSerialData()
 	static uint16_t chksum, rxChksum;
 	static uint32_t last;
 
-	bool ledIsOn = false;
-	if (Serial.available()) {
-		ledOn();
-		ledIsOn = true;
-	}
-
 	while (Serial.available())
 	{
+		ledStartPulse();
+
 		uint8_t data = Serial.read();
 
 		uint32_t now = millis();
@@ -220,15 +235,11 @@ void handleSerialData()
 			break;
 		}
 	}
-
-	if (ledIsOn) {
-		ledOff();
-	}
 }
 
 void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t size)
 {
-	ledOn();
+	ledStartPulse();
 
 	uint8_t packet[5 + size + 2];
 	packet[0] = FRAME_HEADER_1;
@@ -244,8 +255,6 @@ void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t si
 	packet[6 + size] = checksum;
 
 	Serial.write(packet, sizeof(packet));
-
-	ledOff();
 }
 
 //-----------------------------------------------------------------------------
@@ -285,7 +294,7 @@ uint32_t createNonce()
 
 void radioInterrupt()
 {
-	ledOn();
+	ledStartPulse();
 
 	RfmPacket packet;
 	while (radio.receive(packet))
@@ -299,8 +308,6 @@ void radioInterrupt()
 		if (++radioRxTail == RADIO_QUEUE_SIZE)
 			radioRxTail = 0;
 	}
-
-	ledOff();
 }
 
 void sendRadioDone()
@@ -311,7 +318,7 @@ void sendRadioDone()
 
 void sendRadioNow()
 {
-	ledOn();
+	ledStartPulse();
 
 	SensorState &sensor = sensors[sendTo - MIN_ADDR];
 	writeNonce(&sendBuffer[1], sensor.nextSendNonce);
@@ -319,8 +326,6 @@ void sendRadioNow()
 	radio.send(sendTo, sendBuffer, sendSize);
 	interrupts();
 	lastSendTime = millis();
-
-	ledOff();
 }
 
 uint8_t sendRadio(uint8_t to, const uint8_t *data, uint8_t size)
@@ -339,6 +344,8 @@ uint8_t sendRadio(uint8_t to, const uint8_t *data, uint8_t size)
 
 void sendResponse(SensorState &sensor, uint8_t to, uint8_t rssi, uint32_t nonce, bool ack)
 {
+	ledStartPulse();
+
 	uint8_t data[10] = {ack ? MsgType::Ack : MsgType::Nack};
 	writeNonce(&data[1], nonce);
 	writeNonce(&data[5], sensor.nextReceiveNonce);
@@ -517,16 +524,12 @@ void setup()
 
 //-----------------------------------------------------------------------------
 
-// static bool ledOn = false;
-// static uint32_t lastLedOn = millis();
-
 void loop()
 {
 	handleSerialData();
 
 	while (radioRxCount > 0)
 	{
-		//lastLedOn = millis();
 		RfmPacket &rx = radioRxQueue[radioRxHead];
 		onRadioPacketReceived(rx);
 		noInterrupts();
@@ -538,7 +541,6 @@ void loop()
 
 	while (serialRxCount > 0)
 	{
-		//lastLedOn = millis();
 		RxSerial &rx = serialRxQueue[serialRxHead];
 		onSerialPacketReceived(rx.data, rx.size);
 		noInterrupts();
@@ -548,29 +550,19 @@ void loop()
 		interrupts();
 	}
 
-	if (sendRetries > 0 && millis() - lastSendTime >= RETRY_INTERVAL)
+	if (sendRetries > 0 && millis() - lastSendTime >= RETRY_INTERVAL + (uint32_t)random(RETRY_INTERVAL_FUZZ))
 	{
 		sendRetries--;
-		if (sendRetries == 0)
+		if (sendRetries <= 0)
 		{
 			sendRadioDone();
 			serialSendFrame(FRAME_ERR_TIMEOUT, sendTo, NULL, 0);
 		}
 		else
 		{
-			//lastLedOn = millis();
 			sendRadioNow();
 		}
 	}
 
-	// if (ledOn && millis() - lastLedOn > 100)
-	// {
-	// 	ledOn = false;
-	// 	digitalWrite(PIN_LED, LOW);
-	// }
-	// else if (!ledOn && millis() - lastLedOn <= 100)
-	// {
-	// 	ledOn = true;
-	// 	digitalWrite(PIN_LED, HIGH);
-	// }
+	ledCheckStopPulse();
 }
