@@ -100,14 +100,24 @@ RFM69 radio(spi_Transfer, millis);
 
 //-----------------------------------------------------------------------------
 
+void ledOn()
+{
+	digitalWrite(PIN_LED, HIGH);
+}
+
+void ledOff()
+{
+	digitalWrite(PIN_LED, LOW);
+}
+
 void flashLed(uint8_t count, uint16_t delayms = 100)
 {
 	for (uint8_t i = 0; i < count; i++)
 	{
-		digitalWrite(PIN_LED, HIGH);
+		ledOn();
 		if (delayms > 0)
 			delay(delayms);
-		digitalWrite(PIN_LED, LOW);
+		ledOff();
 		if (delayms > 0)
 			delay(delayms);
 	}
@@ -140,6 +150,12 @@ void handleSerialData()
 	static uint8_t offset;
 	static uint16_t chksum, rxChksum;
 	static uint32_t last;
+
+	bool ledIsOn = false;
+	if (Serial.available()) {
+		ledOn();
+		ledIsOn = true;
+	}
 
 	while (Serial.available())
 	{
@@ -195,10 +211,16 @@ void handleSerialData()
 			break;
 		}
 	}
+
+	if (ledIsOn) {
+		ledOff();
+	}
 }
 
 void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t size)
 {
+	ledOn();
+
 	uint8_t packet[5 + size + 2];
 	packet[0] = FRAME_HEADER_1;
 	packet[1] = FRAME_HEADER_2;
@@ -213,6 +235,8 @@ void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t si
 	packet[6 + size] = checksum;
 
 	Serial.write(packet, sizeof(packet));
+
+	ledOff();
 }
 
 //-----------------------------------------------------------------------------
@@ -252,6 +276,8 @@ uint32_t createNonce()
 
 void radioInterrupt()
 {
+	ledOn();
+
 	RfmPacket packet;
 	while (radio.receive(packet))
 	{
@@ -264,6 +290,8 @@ void radioInterrupt()
 		if (++radioRxTail == RADIO_QUEUE_SIZE)
 			radioRxTail = 0;
 	}
+
+	ledOff();
 }
 
 void sendRadioDone()
@@ -274,12 +302,16 @@ void sendRadioDone()
 
 void sendRadioNow()
 {
+	ledOn();
+
 	SensorState &sensor = sensors[sendTo - MIN_ADDR];
 	writeNonce(&sendBuffer[1], sensor.nextSendNonce);
 	noInterrupts();
 	radio.send(sendTo, sendBuffer, sendSize);
 	interrupts();
 	lastSendTime = millis();
+
+	ledOff();
 }
 
 uint8_t sendRadio(uint8_t to, const uint8_t *data, uint8_t size)
@@ -355,6 +387,7 @@ void onSerialPacketReceived(const uint8_t *data, uint8_t size)
 				break;
 			case 'N':
 				radio.setAddress(*data++);
+				radio.setNetwork(1); // put it back on first network
 				size--;
 				break;
 			case 'P':
@@ -447,6 +480,8 @@ void onRadioPacketReceived(RfmPacket &packet)
 void setup()
 {
 	delay(3000);
+
+	pinMode(PIN_LED, OUTPUT);
 	flashLed(1);
 
 	for (uint8_t i = 0; i < SENSORS; i++)
@@ -456,7 +491,16 @@ void setup()
 		sensors[i].nextSendNonce = createNonce();
 	}
 
-	if (!radio.initialize(RF69_433MHZ, 1, 1, true))
+    digitalWrite(SS, HIGH);
+    pinMode(SS, OUTPUT);
+
+    SPI.begin();
+    SPI.setDataMode(SPI_MODE0);
+    SPI.setBitOrder(MSBFIRST);
+    SPI.setClockDivider(SPI_CLOCK_DIV4);
+
+	// put it on unused network, setup packet will put it back
+	if (!radio.initialize(RF69_433MHZ, 1, 9, true))
 	{
 		flashLed(10);
 		while (1)
@@ -470,16 +514,16 @@ void setup()
 
 //-----------------------------------------------------------------------------
 
-static bool ledOn = false;
-static uint32_t lastLedOn = millis();
+// static bool ledOn = false;
+// static uint32_t lastLedOn = millis();
 
 void loop()
 {
 	handleSerialData();
 
-	while (radioRxCount != 0)
+	while (radioRxCount > 0)
 	{
-		lastLedOn = millis();
+		//lastLedOn = millis();
 		RfmPacket &rx = radioRxQueue[radioRxHead];
 		onRadioPacketReceived(rx);
 		noInterrupts();
@@ -489,9 +533,9 @@ void loop()
 		interrupts();
 	}
 
-	while (serialRxCount != 0)
+	while (serialRxCount > 0)
 	{
-		lastLedOn = millis();
+		//lastLedOn = millis();
 		RxSerial &rx = serialRxQueue[serialRxHead];
 		onSerialPacketReceived(rx.data, rx.size);
 		noInterrupts();
@@ -501,7 +545,7 @@ void loop()
 		interrupts();
 	}
 
-	if (sendRetries && millis() - lastSendTime >= RETRY_INTERVAL)
+	if (sendRetries > 0 && millis() - lastSendTime >= RETRY_INTERVAL)
 	{
 		sendRetries--;
 		if (sendRetries == 0)
@@ -511,19 +555,19 @@ void loop()
 		}
 		else
 		{
-			lastLedOn = millis();
+			//lastLedOn = millis();
 			sendRadioNow();
 		}
 	}
 
-	if (ledOn && millis() - lastLedOn > 100)
-	{
-		ledOn = false;
-		digitalWrite(PIN_LED, LOW);
-	}
-	else if (!ledOn && millis() - lastLedOn <= 100)
-	{
-		ledOn = true;
-		digitalWrite(PIN_LED, HIGH);
-	}
+	// if (ledOn && millis() - lastLedOn > 100)
+	// {
+	// 	ledOn = false;
+	// 	digitalWrite(PIN_LED, LOW);
+	// }
+	// else if (!ledOn && millis() - lastLedOn <= 100)
+	// {
+	// 	ledOn = true;
+	// 	digitalWrite(PIN_LED, HIGH);
+	// }
 }
