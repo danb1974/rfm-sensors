@@ -19,7 +19,7 @@ void flashLed(uint8_t count)
 void setup()
 {
     // settle
-    sensor.sleep(5);
+    sensor.sleep(3);
 
     // signal start of setup
     pinMode(PIN_LED, OUTPUT);
@@ -33,6 +33,7 @@ void setup()
 
     // signal end of setup
     flashLed(3);
+    sensor.sleep(1);
 }
 
 void loop()
