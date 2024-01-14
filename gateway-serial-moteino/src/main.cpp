@@ -85,7 +85,7 @@ typedef enum
 	Chk2
 } RxStatus;
 
-void spi_Transfer(uint8_t *data, uint8_t len)
+void spiTransfer(uint8_t *data, uint8_t len)
 {
 	digitalWrite(SS, LOW);
 	while (len--)
@@ -96,7 +96,18 @@ void spi_Transfer(uint8_t *data, uint8_t len)
 	digitalWrite(SS, HIGH);
 }
 
-RFM69 radio(spi_Transfer, millis);
+void spiSetup()
+{
+	digitalWrite(SS, HIGH);
+    pinMode(SS, OUTPUT);
+
+    SPI.begin();
+    SPI.setDataMode(SPI_MODE0);
+    SPI.setBitOrder(MSBFIRST);
+    SPI.setClockDivider(SPI_CLOCK_DIV4);
+}
+
+RFM69 radio(spiTransfer, millis);
 
 //-----------------------------------------------------------------------------
 
@@ -138,9 +149,7 @@ static uint16_t getChecksum(uint8_t *data, uint8_t length)
 {
 	uint16_t checksum = CHKSUM_INIT;
 	while (length--)
-	{
 		updateChecksum(&checksum, *data++);
-	}
 	return checksum;
 }
 
@@ -491,13 +500,7 @@ void setup()
 		sensors[i].nextSendNonce = createNonce();
 	}
 
-    digitalWrite(SS, HIGH);
-    pinMode(SS, OUTPUT);
-
-    SPI.begin();
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setClockDivider(SPI_CLOCK_DIV4);
+	spiSetup();
 
 	// put it on unused network, setup packet will put it back
 	if (!radio.initialize(RF69_433MHZ, 1, 9, true))
