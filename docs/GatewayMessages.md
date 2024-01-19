@@ -78,6 +78,14 @@ pp = pressure
 b = voltage / 10 - 100
 ```
 
+##### incoming
+
+```
+0x02, o, s
+o = on
+s = setpoint
+```
+
 ---
 
 ##### actuator-valve
