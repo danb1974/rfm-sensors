@@ -1,6 +1,6 @@
 {
   "name": "@danb1974/gateway-node",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "",
   "main": "index.js",
   "scripts": {

@@ -328,14 +328,14 @@ module.exports = function (RED) {
                     ignoreElements(),
                 );
 
-                const turnOffHeating$ = defer(() => {
-                    if (room.mode$.value === 'heat') {
-                        room.mode$.next('off');
-                    }
-                });
+                // const turnOffHeating$ = defer(() => {
+                //     if (room.mode$.value === 'heat') {
+                //         room.mode$.next('off');
+                //     }
+                // });
 
                 valvePoll$.pipe(
-                    switchMap(_ => concat(valveReply$, valveTimeout$, turnOffHeating$)),
+                    switchMap(_ => concat(valveReply$, valveTimeout$/*, turnOffHeating$*/)),
                     takeUntil(close$),
                 ).subscribe();
 
