@@ -6,7 +6,7 @@ $| =  1;
 
 # Usage sample:
 #
-# tcpflow -cD port 23 | perl decode_gw_tcpflow.pl
+# tcpflow -cDp port 23 | perl decode_gw_tcpflow.pl
 
 # tcpflow output:
 #
@@ -15,23 +15,8 @@ $| =  1;
 
 my($src, $dst);
 
-while (my $line = <STDIN>) {
-	chomp($line);
-
-	if ($line =~ m!^(\d{3}\.\d{3}\.\d{3}\.\d{3})\.\d+-(\d{3}\.\d{3}\.\d{3}\.\d{3})\.\d+:!) {
-		$src = $1; 
-		$dst = $2;
-
-		$src =~ s!\.0+!.!g;
-		$dst =~ s!\.0+!.!g;
-
-		next;
-	}
-
-	if ($line =~ m!^0000: ((?:[0-9a-f]{2,4} )+)!) {
-		my $data = $1;
-		$data =~ s! +!!g;
-		print "FROM $src TO $dst DATA $data";
+sub process_packet {
+	my ($data) = @_;
 
 		my $header = substr $data, 0, 4;
 		if ($header eq "de5b") {
@@ -45,7 +30,12 @@ while (my $line = <STDIN>) {
 
 			# 0 is type, 1 is id, data starts from 2
 
-			if ($bytes[0] == 0x95) {
+			if ($bytes[0] == 0xff) {
+				print " KEEPALIVE";
+				print "\n";
+			}
+
+			elsif ($bytes[0] == 0x95) {
 				print " INIT";
 				print "\n";
 			}
@@ -100,6 +90,10 @@ while (my $line = <STDIN>) {
 					print " sensor-light-dimmer";
 					print " set-min-light ", $bytes[3];
 					print " timeout ", $bytes[4];
+				}
+
+				elsif (scalar(@bytes) == 3) {
+					print " one_byte ", $bytes[2];
 				}
 
 				print "\n";
@@ -165,5 +159,57 @@ while (my $line = <STDIN>) {
 		}
 
 		#print "\n";
+}
+
+my $buffer;
+
+while (my $line = <STDIN>) {
+	chomp($line);
+
+	if ($line =~ m!^(\d{3}\.\d{3}\.\d{3}\.\d{3})\.\d+-(\d{3}\.\d{3}\.\d{3}\.\d{3})\.\d+:!) {
+		$src = $1; 
+		$dst = $2;
+
+		$src =~ s!\.0+!.!g;
+		$dst =~ s!\.0+!.!g;
+
+		next;
+	}
+
+	if ($line =~ m!^0000: ((?:[0-9a-f]{2,4} )+)!) {
+		my $data = $1;
+		$data =~ s! +!!g;
+
+		$buffer .= $data;
+
+		while (1) {
+			if ($buffer eq "") {
+				last;
+			}
+
+			if (substr($buffer, 0, 4) ne "de5b") {
+				$buffer =~ m!^(.*?)(de5b.*)?$!;
+				my $noise = $1;
+				$buffer = $2 || "";
+
+				print "Packet with extra bytes $src to $dst: noise '$noise', keeping '$buffer'\n";
+			
+				last;
+			}
+
+			my $dataSize = hex(substr $buffer, 4, 2);
+			my $totalSize = 6 + $dataSize * 2 + 4;
+
+			if (length($buffer) < $totalSize) {
+				last;
+			}
+
+			#print "SIZE $totalSize ";
+			print time(), " ";
+			$data = substr($buffer, 0, $totalSize, "");
+
+			print "FROM $src TO $dst DATA $data";
+			process_packet($data);
+		}
 	}
 }
