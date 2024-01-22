@@ -1,5 +1,5 @@
-import { defer } from 'rxjs';
-import { filter, map, publishReplay, refCount, scan, share } from 'rxjs/operators';
+import {defer, from} from 'rxjs';
+import {filter, publishReplay, refCount, scan, share, switchMap} from 'rxjs/operators';
 
 import { timeSpan } from '../util';
 import { ConnectableLayer } from './message';
@@ -16,7 +16,7 @@ interface State {
     size: number;
     offset: number;
     chkSum: number;
-    received: Buffer | null;
+    received: Buffer[];
     last: number;
 }
 
@@ -24,9 +24,6 @@ export class PackageLayer implements ConnectableLayer<Buffer> {
     readonly data = this.below.data
         .pipe(
             scan((state: State, value: Buffer) => {
-                if (state.received) {
-                    state.received = null;
-                }
                 this.processReceivedData(state, value);
                 return state;
             }, {
@@ -36,10 +33,15 @@ export class PackageLayer implements ConnectableLayer<Buffer> {
                 chkSum: 0,
                 size: 0,
                 last: 0,
-                received: null,
+                received: [],
             } as State),
-            map(v => v.received),
-            filter(Buffer.isBuffer),
+            filter(v => v.received.length > 0),
+            switchMap(v => {
+                const buffers = v.received;
+                v.received = [];
+                // return of(buffers[0]);
+                return from(buffers);
+            }),
             share()
         );
 
@@ -85,7 +87,7 @@ export class PackageLayer implements ConnectableLayer<Buffer> {
                     state.chkSum |= data;
                     const checksum = this.getChecksum(state.buffer!);
                     if (checksum === state.chkSum) {
-                        state.received = state.buffer;
+                        state.received.push(state.buffer!);
                         state.buffer = null;
                     }
                     state.status = RxStatus.Idle;
