@@ -32,14 +32,16 @@ module.exports = function (RED) {
 
         const syncState = () => concat(
             nodeLayer.send(Buffer.from([2])), // get status
+            timer(timeSpan(3, 'sec')),
             nodeLayer.send(Buffer.from([3, mode, config.maxbrightness])), // set mode
+            timer(timeSpan(3, 'sec')),
             nodeLayer.send(Buffer.from([4, ledBrightness])), // set led bright
         );
 
         combineLatest([nodeLayer.connected, periodicSync])
             .pipe(
                 takeUntil(stop),
-                switchMap(([isConnected]) => isConnected ? timer(timeSpan(Math.random(), 'min')) : NEVER),
+                switchMap(([isConnected]) => isConnected ? timer(timeSpan(1 + Math.random(), 'min')) : NEVER),
                 switchMap(_ => syncState().pipe(catchError(err => {
                     this.error(`while sync: ${err.message}`);
                     return EMPTY;
