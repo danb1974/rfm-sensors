@@ -6,6 +6,8 @@ import { Logger } from '../Logger';
 import { timeSpan } from '../util';
 import { ConnectableLayer } from './message';
 
+const FrameHeader = '\xDE\x5B';
+
 export class Telnet implements ConnectableLayer<Buffer> {
     private readonly _data = new Subject<Buffer>();
     private socket: net.Socket | null = null;
@@ -46,7 +48,17 @@ export class Telnet implements ConnectableLayer<Buffer> {
         return new Observable<net.Socket>(observer => {
             const socket = new net.Socket();
             socket.setNoDelay(true);
-            socket.on('data', data => this._data.next(data));
+            socket.on('data', data => {
+                // make sure we do not have two packets in the same buffer
+                // until we fix processing
+                const parts = data.toString('binary').split(FrameHeader);
+                for (let i = 0; i < parts.length; i++) {
+                    let part = (i > 0) ? FrameHeader : '';
+                    part += parts[i];
+                    const buffer = Buffer.from(part, 'binary');
+                    this._data.next(buffer);
+                }
+            });
             socket.once('disconnect', () => observer.error(new Error('disconnected from server')));
             socket.once('error', err => observer.error(err));
             socket.once('end', (hadError: boolean) => {
