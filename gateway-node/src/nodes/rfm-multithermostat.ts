@@ -63,25 +63,25 @@ const defaultSettings = {
     valveClosePercent: 85,
     rooms: {
         'living': {
-            mode: 'off' as ThermostatMode,
+            mode: 'heat' as ThermostatMode,
             setpoint: 22,
             thermostatAddress: 30,
             valveAddress: 4,
         },
         'office': {
-            mode: 'off' as ThermostatMode,
+            mode: 'heat' as ThermostatMode,
             setpoint: 22,
             thermostatAddress: 31,
             valveAddress: 7,
         },
         'bedroom': {
-            mode: 'off' as ThermostatMode,
+            mode: 'heat' as ThermostatMode,
             setpoint: 22,
             thermostatAddress: 32,
             valveAddress: 5,
         },
         'kids': {
-            mode: 'off' as ThermostatMode,
+            mode: 'heat' as ThermostatMode,
             setpoint: 22,
             thermostatAddress: 33,
             valveAddress: 6,
@@ -290,10 +290,13 @@ module.exports = function (RED) {
                 const humidity$ = values$.pipe(map(s => s.humidity));
 
                 const valve = create(roomSettings.valveAddress);
-                const valveBattery$ = valve.data.pipe(filter(b => b.length === 2 && b[0] === 'B'.charCodeAt(0)), map(b => b[1] / 100 + 1));
+                const valveBattery$ = valve.data.pipe(
+                    filter(b => b.length === 2 && b[0] === 'B'.charCodeAt(0)),
+                    map(b => b[1] / 100 + 1)
+                );
 
                 const room: RoomObservable = {
-                    mode$: new BehaviorSubject(roomSettings.mode || 'off'),
+                    mode$: new BehaviorSubject(roomSettings.mode || 'heat'),
                     valveOpenPercent$: new BehaviorSubject(settings.valveOpenPercent),
                     temperature$,
                     humidity$,
