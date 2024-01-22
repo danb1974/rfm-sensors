@@ -6,14 +6,12 @@ $| =  1;
 
 # Usage sample:
 #
-# tcpflow -cDp port 23 | perl decode_gw_tcpflow.pl
+# tcpflow -cDp -S enable_report=NO port 23 | perl decode_gw_tcpflow.pl
 
 # tcpflow output:
 #
 # 192.168.001.003.46992-192.168.001.161.00023: 
 # 0000: de5b 0196 4010  .[..@.
-
-my($src, $dst);
 
 sub process_packet {
 	my ($data) = @_;
@@ -161,7 +159,9 @@ sub process_packet {
 		#print "\n";
 }
 
-my $buffer;
+my %buffer;
+my $bufkey;
+my($src, $dst);
 
 while (my $line = <STDIN>) {
 	chomp($line);
@@ -172,6 +172,7 @@ while (my $line = <STDIN>) {
 
 		$src =~ s!\.0+!.!g;
 		$dst =~ s!\.0+!.!g;
+		$bufkey = $src . "-" . $dst;
 
 		next;
 	}
@@ -180,33 +181,33 @@ while (my $line = <STDIN>) {
 		my $data = $1;
 		$data =~ s! +!!g;
 
-		$buffer .= $data;
+		$buffer{$bufkey} .= $data;
 
 		while (1) {
-			if ($buffer eq "") {
+			if ($buffer{$bufkey} eq "") {
 				last;
 			}
 
-			if (substr($buffer, 0, 4) ne "de5b") {
-				$buffer =~ m!^(.*?)(de5b.*)?$!;
+			if (substr($buffer{$bufkey}, 0, 4) ne "de5b") {
+				$buffer{$bufkey} =~ m!^(.*?)(de5b.*)?$!;
 				my $noise = $1;
-				$buffer = $2 || "";
+				$buffer{$bufkey} = $2 || "";
 
-				print "Packet with extra bytes $src to $dst: noise '$noise', keeping '$buffer'\n";
+				print "Packet with extra bytes $src to $dst: noise '$noise', keeping '$buffer{$bufkey}'\n";
 			
 				last;
 			}
 
-			my $dataSize = hex(substr $buffer, 4, 2);
+			my $dataSize = hex(substr $buffer{$bufkey}, 4, 2);
 			my $totalSize = 6 + $dataSize * 2 + 4;
 
-			if (length($buffer) < $totalSize) {
+			if (length($buffer{$bufkey}) < $totalSize) {
 				last;
 			}
 
 			#print "SIZE $totalSize ";
 			print time(), " ";
-			$data = substr($buffer, 0, $totalSize, "");
+			$data = substr($buffer{$bufkey}, 0, $totalSize, "");
 
 			print "FROM $src TO $dst DATA $data";
 			process_packet($data);
