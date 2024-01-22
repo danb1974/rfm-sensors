@@ -4,7 +4,7 @@
 
 #define PIN_LED 9
 
-#define SERIAL_RATE 9600
+#define SERIAL_RATE 57600
 
 #define FRAME_HEADER_1 0xDE
 #define FRAME_HEADER_2 0x5B
@@ -241,7 +241,8 @@ void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t si
 {
 	ledStartPulse();
 
-	uint8_t packet[5 + size + 2];
+	uint8_t dataSize = 5 + size + 2;
+	uint8_t packet[dataSize];
 	packet[0] = FRAME_HEADER_1;
 	packet[1] = FRAME_HEADER_2;
 	packet[2] = size + 2;
@@ -254,7 +255,7 @@ void serialSendFrame(uint8_t head, uint8_t from, const uint8_t *data, uint8_t si
 	packet[5 + size] = checksum >> 8;
 	packet[6 + size] = checksum;
 
-	Serial.write(packet, sizeof(packet));
+	Serial.write(packet, dataSize);
 }
 
 //-----------------------------------------------------------------------------
@@ -346,12 +347,13 @@ void sendResponse(SensorState &sensor, uint8_t to, uint8_t rssi, uint32_t nonce,
 {
 	ledStartPulse();
 
-	uint8_t data[10] = {ack ? MsgType::Ack : MsgType::Nack};
+	uint8_t dataSize = 10;
+	uint8_t data[dataSize] = {ack ? MsgType::Ack : MsgType::Nack};
 	writeNonce(&data[1], nonce);
 	writeNonce(&data[5], sensor.nextReceiveNonce);
 	data[9] = rssi;
 	noInterrupts();
-	radio.send(to, data, sizeof(data));
+	radio.send(to, data, dataSize);
 	interrupts();
 }
 
