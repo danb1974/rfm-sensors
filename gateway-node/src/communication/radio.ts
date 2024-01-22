@@ -26,11 +26,13 @@ class Constants {
     static readonly Rsp_Init = 0x95;
     static readonly HeartBeat = 0x96;
 
+    static readonly Err_Min = 0x70;
     static readonly Err_InvalidSize = 0x71;
     static readonly Err_Busy = 0x72;
     static readonly Err_Addr = 0x73;
     static readonly Err_Mem = 0x74;
     static readonly Err_Timeout = 0x75;
+    static readonly Err_Max = 0x7f;
 }
 
 export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer }> {
@@ -176,16 +178,20 @@ export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer
 
         return this.sendPacketAndWaitFor(pack,
             r => {
-                if (r[1] !== addr) { return false; }
+                if (r[1] !== addr) {
+                    return false; 
+                }
+
                 switch (r[0]) {
                     case Constants.Rsp_PacketSent: return true;
 
                     case Constants.Err_Addr: throw new Error(`invalid address ${r[1]}`);
-                    case Constants.Err_Busy: throw new Error(`address already busy ${r[1]}`);
+                    case Constants.Err_Busy: throw new Error(`address ${r[1]} already busy`);
                     case Constants.Err_InvalidSize: throw new Error(`invalid size ${data.length}`);
                     case Constants.Err_Mem: throw new Error(`gw memory full`);
-                    case Constants.Err_Timeout: throw new Error(`timeout. no ack (${addr})`);
+                    case Constants.Err_Timeout: throw new Error(`timeout (no ack) sending to (${r[1]})`);
                 }
+
                 return false;
             });
     }
@@ -194,8 +200,10 @@ export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer
         const waitForReply$ = this.below.data.pipe(
             filter(p => verifyReply(p)),
             first(),
+            ignoreElements(),
             timeout(timeoutTime)
         );
+
         return merge(waitForReply$, this.below.send(packet))
             .pipe(
                 catchError(err => {
