@@ -26,9 +26,9 @@
 
 #define CHKSUM_INIT 0x1021
 
-#define SEND_RETRIES 5
-#define RETRY_INTERVAL 200
-#define RETRY_INTERVAL_FUZZ 100
+#define SEND_RETRIES 3
+#define RETRY_INTERVAL 50
+#define RETRY_INTERVAL_FUZZ 25
 
 typedef struct
 {
