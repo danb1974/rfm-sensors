@@ -14,4 +14,4 @@ python esptool\esptool.py --port COM7 --baud 230400 write_flash -fs detect -ff 8
 
 #### Misc
 * if bootloop, connect a terminal at 76600 (yup) to see the error
-* if normal, you get some information first at 76600 then at 115200 (mmm)
+* if normal, you get some information first at 76600 (some say at 74880) then at 115200 (mmm)
