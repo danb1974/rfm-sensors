@@ -3,8 +3,9 @@
 #include <RFM69.h>
 
 #define PIN_LED 9
+#define PIN_EXTLED 3 // conect between 3.3V and D3 !!
 
-#define SERIAL_RATE 57600
+#define SERIAL_RATE 115200
 
 #define FRAME_HEADER_1 0xDE
 #define FRAME_HEADER_2 0x5B
@@ -118,6 +119,7 @@ static uint32_t ledIsOnSince = 0;
 void ledOn()
 {
 	digitalWrite(PIN_LED, HIGH);
+	analogWrite(PIN_EXTLED, 0xD0);
 	ledIsOn = true;
 	ledIsOnSince = millis();
 }
@@ -125,6 +127,7 @@ void ledOn()
 void ledOff()
 {
 	digitalWrite(PIN_LED, LOW);
+	analogWrite(PIN_EXTLED, 0xF0);
 	ledIsOn = false;
 	ledIsOnSince = 0;
 }
@@ -500,6 +503,8 @@ void setup()
 	delay(3000);
 
 	pinMode(PIN_LED, OUTPUT);
+	pinMode(PIN_EXTLED, OUTPUT);
+
 	flashLed(1);
 
 	for (uint8_t i = 0; i < SENSORS; i++)
