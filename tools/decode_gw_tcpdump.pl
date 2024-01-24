@@ -4,16 +4,9 @@ use strict;
 
 $| =  1;
 
-# Usage sample:
+# Usage sample, run on the nodered computer:
 #
-# tcpdump -i eth0 -p -l -s 1500 -x port 23 and host 192.168.1.113 | perl decode_gw_tcpdump.pl
-
-# tcpdump output
-#
-#19:15:02.776819 IP 192.168.1.136.telnet > 192.168.1.113.42444: Flags [P.], seq 1:8, ack 6, win 1965, length 7
-#        0x0000:  4500 002f 0128 0000 8006 b557 c0a8 0188
-#        0x0010:  c0a8 0171 0017 a5cc 0000 1a82 fe0b 36ed
-#        0x0020:  5018 07ad 20fe 0000 de5b 0296 0080 2c
+# tcpdump -i eth0 -p -l -s 1500 -x port 23 and host your.ip.address.here | perl decode_gw_tcpdump.pl
 
 sub process_packet {
 	my ($data) = @_;
@@ -166,6 +159,7 @@ my %buffer2;
 my $bufkey;
 my $length;
 my($src, $dst);
+my $processed = 1;
 
 #19:15:02.776819 IP 192.168.1.136.telnet > 192.168.1.113.42444: Flags [P.], seq 1:8, ack 6, win 1965, length 7
 #        0x0000:  4500 002f 0128 0000 8006 b557 c0a8 0188
@@ -180,6 +174,7 @@ while (my $line = <STDIN>) {
 		$src = $1; 
 		$dst = $2;
 		$length = $3;
+		$processed = 0;
 #		print "src $dst dst $dst len $length\n";
 
 		$src =~ s!\.0+!.!g;
@@ -190,21 +185,26 @@ while (my $line = <STDIN>) {
 	}
 
 	if ($line =~ m!0x[0-9a-f]{4}: +(.+?)$!io) {
+		if ($processed == 1) {
+			# extra data line
+			next;
+		}
+
 		my $data = $1;
 		$data =~ s! +!!g;
-#		print "data $data\n";
 
 		$buffer2{$bufkey} .= $data;
-#		print "buffer now $buffer2{$bufkey}\n";
 
 		if (length($buffer2{$bufkey}) < (40 + $length) * 2) {
 			next;
 		}
 
-		$buffer2{$bufkey} = substr $buffer2{$bufkey}, 40 * 2;
-		$buffer{$bufkey} .= $buffer2{$bufkey};
+		# keep only declared payload
+		$buffer{$bufkey} = substr $buffer2{$bufkey}, 40 * 2, $length * 2;
 		$buffer2{$bufkey} = "";
 #		print "processing $buffer{$bufkey}\n";
+
+		$processed = 1;
 
 		while (1) {
 			if ($buffer{$bufkey} eq "") {
