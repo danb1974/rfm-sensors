@@ -186,10 +186,10 @@ export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer
                     case Constants.Rsp_PacketSent: return true;
 
                     case Constants.Err_Addr: throw new Error(`invalid address ${r[1]}`);
-                    case Constants.Err_Busy: throw new Error(`address ${r[1]} already busy`);
+                    case Constants.Err_Busy: throw new Error(`address ${r[1]} busy`);
                     case Constants.Err_InvalidSize: throw new Error(`invalid size ${data.length}`);
                     case Constants.Err_Mem: throw new Error(`gw memory full`);
-                    case Constants.Err_Timeout: throw new Error(`timeout (no ack) sending to (${r[1]})`);
+                    case Constants.Err_Timeout: throw new Error(`timeout (no ack) sending to ${r[1]}`);
                 }
 
                 return false;
