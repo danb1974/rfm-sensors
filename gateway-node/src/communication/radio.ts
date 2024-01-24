@@ -70,7 +70,7 @@ export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer
                 : of(isConnected)
             ),
             retryWhen(errs => errs.pipe(
-                tap(err => this.logger.warn(`radio: reconnecting ${err.message}`)),
+                tap(err => this.logger.warn(`radio: reconnecting: ${err.message}`)),
                 delay(timeSpan(5, 'sec')),
             )),
             distinctUntilChanged(),
@@ -84,7 +84,7 @@ export class RadioLayer implements ConnectableLayer<{ addr: number, data: Buffer
         {
             key,
             powerLevel = 31,
-            heartBeatInterval = 15e3,
+            heartBeatInterval = 60 * 1000, // ms
             requireHeartbeatEcho = false,
             freq,
             networkId,
