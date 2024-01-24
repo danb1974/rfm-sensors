@@ -40,7 +40,7 @@ export function timeSpan(value: number, unit: 'day' | 'hour' | 'min' | 'sec') {
         unit = 'sec';
     }
 
-    return value * 1000;
+    return Math.round(value * 1000);
 }
 
 export function getPackageLayer(address: string, logger: Logger): PackageLayer {

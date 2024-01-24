@@ -338,6 +338,8 @@ module.exports = function (RED) {
                 // });
 
                 valvePoll$.pipe(
+                    // can't set delay since the valve expects reply immediately after sending state
+                    //switchMap(() => timer(timeSpan(Math.random() * 10, 'sec'))),
                     switchMap(_ => concat(valveReply$, valveTimeout$/*, turnOffHeating$*/)),
                     takeUntil(close$),
                 ).subscribe();
