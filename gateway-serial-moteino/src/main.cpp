@@ -53,9 +53,9 @@ static RfmPacket radioRxQueue[RADIO_QUEUE_SIZE];
 static volatile uint8_t radioRxTail = 0, radioRxCount = 0;
 static uint8_t radioRxHead = 0;
 
-uint32_t lastSendTime;
-uint8_t sendBuffer[RF69_MAX_DATA_LEN], sendSize, sendRetries;
-uint8_t sendTo;
+static uint32_t lastSendTime;
+static uint8_t sendBuffer[RF69_MAX_DATA_LEN], sendSize, sendRetries;
+static uint8_t sendTo;
 
 #define TX_PACKET_SIZE 60
 typedef struct
@@ -73,9 +73,9 @@ typedef struct
 } RxSerial;
 
 #define SERIAL_RX_QUEUE_SIZE 5
-RxSerial serialRxQueue[SERIAL_RX_QUEUE_SIZE];
-volatile uint8_t serialRxTail = 0, serialRxCount = 0;
-uint8_t serialRxHead = 0;
+static RxSerial serialRxQueue[SERIAL_RX_QUEUE_SIZE];
+static volatile uint8_t serialRxTail = 0, serialRxCount = 0;
+static uint8_t serialRxHead = 0;
 
 typedef enum
 {
