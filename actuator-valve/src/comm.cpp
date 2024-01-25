@@ -5,9 +5,9 @@
 #include "hal/rtc.h"
 #include "hal/motor.h"
 
-#define POLL_SECONDS 300
+#define POLL_SECONDS 180
 #define POLL_FAIL_SECONDS 10
-#define POLL_ALIVE_MS 100
+#define POLL_ALIVE_MS 3000
 
 void spiTransfer(uint8_t *data, uint8_t len);
 static Sensor sensor(spiTransfer);
@@ -127,13 +127,16 @@ bool commUpdate()
             if (millis() - lastSendMillis >= POLL_ALIVE_MS)
             {
                 sending = false;
+                Lcd_Symbol(ICE, 0);
                 sensor.powerDown();
                 lastSendRtc -= POLL_SECONDS - POLL_FAIL_SECONDS;
             }
         }
         else
         {
+            lastSendRtc -= random(10);
             sending = false;
+            Lcd_Symbol(ICE, 0);
         }
     }
     else
@@ -152,6 +155,7 @@ bool commUpdate()
             uint8_t sendBat = battery / 10 - 100;
             uint8_t reqData[2] = {'B', sendBat};
             sending = sensor.send(reqData, sizeof(reqData));
+            Lcd_Symbol(ICE, sending ? 1 : 0);
         }
     }
 
