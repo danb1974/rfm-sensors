@@ -90,10 +90,18 @@ void commInit()
     DDRF = (1 << PF7);
     SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPI2X);
 
-    if (sensor.init())
+    if (!sensor.init())
     {
-        Lcd_Symbol(RADIO, 1);
+        Lcd_Symbol(MOON, 1);
+        sensor.powerDown();
+        while (1)
+        {
+            delay(10000);
+            //sensor.sleep(10000);
+        }
     }
+    Lcd_Symbol(RADIO, 1);
+
     sensor.powerLevel(31);
     sensor.powerDown();
     sensor.onMessage(messageReceived);
