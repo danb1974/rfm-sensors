@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
+use POSIX qw( strftime );
 
 $| =  1;
 
@@ -229,7 +230,8 @@ while (my $line = <STDIN>) {
 			}
 
 			#print "SIZE $totalSize ";
-			print time(), " ";
+			print strftime("%Y-%m-%d %H:%M:%S", localtime time), " ";
+			#print time(), " ";
 			$data = substr($buffer{$bufkey}, 0, $totalSize, "");
 
 			print "FROM $src TO $dst DATA $data";
