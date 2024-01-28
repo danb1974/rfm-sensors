@@ -58,7 +58,7 @@ interface RoomObservable {
 const defaultSettings = {
     enable: false,
     heaterAddress: 9,
-    histerezis: .3,
+    histerezis: 0.2,
     valveOpenPercent: 0,
     valveClosePercent: 85,
     rooms: {
@@ -72,7 +72,7 @@ const defaultSettings = {
             mode: 'heat' as ThermostatMode,
             setpoint: 21,
             thermostatAddress: 1031,
-            valveAddress: 1008,
+            valveAddress: 1007,
         },
         'bedroom': {
             mode: 'heat' as ThermostatMode,
@@ -84,7 +84,7 @@ const defaultSettings = {
             mode: 'heat' as ThermostatMode,
             setpoint: 21,
             thermostatAddress: 1033,
-            valveAddress: 1007,
+            valveAddress: 1008,
         },
     },
 };
