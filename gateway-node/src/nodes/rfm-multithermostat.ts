@@ -64,27 +64,27 @@ const defaultSettings = {
     rooms: {
         'living': {
             mode: 'heat' as ThermostatMode,
-            setpoint: 22,
+            setpoint: 21,
             thermostatAddress: 30,
             valveAddress: 4,
         },
         'office': {
             mode: 'heat' as ThermostatMode,
-            setpoint: 22,
-            thermostatAddress: 31,
-            valveAddress: 7,
+            setpoint: 21,
+            thermostatAddress: 1031,
+            valveAddress: 1008,
         },
         'bedroom': {
             mode: 'heat' as ThermostatMode,
-            setpoint: 22,
+            setpoint: 21,
             thermostatAddress: 32,
             valveAddress: 5,
         },
         'kids': {
             mode: 'heat' as ThermostatMode,
-            setpoint: 22,
-            thermostatAddress: 33,
-            valveAddress: 6,
+            setpoint: 21,
+            thermostatAddress: 1033,
+            valveAddress: 1007,
         },
     },
 };
