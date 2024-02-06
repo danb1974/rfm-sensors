@@ -119,6 +119,8 @@ static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
 static volatile uint32_t lastCrossUs = 0;
 
+// WARNING zero cross only happens each 20ms since only one of the transitions is detected
+// the triac interrupt handler schedules a second triac pulse after 10ms
 void zeroCross()
 {
     uint32_t nowUs = micros();
@@ -205,7 +207,7 @@ ISR(TIMER1_COMPA_vect)
 {
     // reset counter
     TCNT1 = 0;
-    OCR1A = 20000; // 10ms, half sine
+    OCR1A = 20000; // schedule next pulse after 10ms, see comment on zeroCross()
 
     // pulse triac (needs one classic light bulb to keep it on, not only leds)
     PORTD |= 1 << PIN_TRIAC;
