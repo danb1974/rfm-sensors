@@ -3,11 +3,11 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
-#define PIN_OB_LED 9
+#define PIN_LED 9
 
 #define PIN_ZERO 3
 #define PIN_TOUCH 4
-#define PIN_LED 5
+#define PIN_RB_LED 5
 #define PIN_TRIAC 6
 
 Sensor sensor(false);
@@ -33,25 +33,27 @@ static uint8_t ledBrightness = 255;
 static uint8_t minBrightness = 0;
 static uint32_t minBrightnessReset = 0;
 
-void setLedBrightness(uint8_t brightness);
+void setRBLedBrightness(uint8_t brightness);
 
-void flashOnboardLed(uint8_t count)
+void flashLed(uint8_t count, uint16_t delayms = 100)
 {
-    for (uint8_t i = 0; i < count; i++)
-    {
-        digitalWrite(PIN_OB_LED, HIGH);
-        delay(100);
-        digitalWrite(PIN_OB_LED, LOW);
-        delay(100);
-    }
+	for (uint8_t i = 0; i < count; i++)
+	{
+		digitalWrite(PIN_LED, HIGH);
+		if (delayms > 0)
+			delay(delayms);
+		digitalWrite(PIN_LED, LOW);
+		if (delayms > 0)
+			delay(delayms);
+	}
 }
 
-inline void updateLed()
+inline void updateRBLed()
 {
     if (brightness)
-        PORTD &= ~(1 << PIN_LED);
+        PORTD &= ~(1 << PIN_RB_LED);
     else
-        PORTD |= 1 << PIN_LED;
+        PORTD |= 1 << PIN_RB_LED;
 }
 
 void sendState()
@@ -68,7 +70,7 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
             brightness = 100;
         else
             brightness = data[1];
-        updateLed();
+        updateRBLed();
     }
     else if (data[0] == CMD_GET && length == 1)
     {
@@ -81,7 +83,7 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
     }
     else if (data[0] == CMD_SET_LED && length == 2)
     {
-        setLedBrightness(data[1]);
+        setRBLedBrightness(data[1]);
     }
     else if (data[0] == CMD_MIN_LIGHT && length == 3)
     {
@@ -113,8 +115,30 @@ static const uint16_t powerToTicks[100] = {
 //     2883, 2706, 2534, 2367, 2206, 2049, 1898, 1753, 1613, 1480, 1352, 1231, 1115,
 //     1007, 904, 809, 720, 637, 562, 494, 432, 378, 331, 291, 258, 233, 215, 204, 200};
 
+static volatile bool ledShouldBeOn = false;
+static volatile uint32_t ledIsOnSinceUs = 0;
+static volatile uint32_t lastCrossUs = 0;
+
 void zeroCross()
 {
+    uint32_t nowUs = micros();
+
+    // detect and ignore noise, blink led
+    if (nowUs - lastCrossUs < 2000) {
+        if (!ledShouldBeOn) {
+            ledShouldBeOn = true;
+            ledIsOnSinceUs = nowUs;
+        }
+
+        return;
+    }
+    lastCrossUs = nowUs;
+
+    // keep blinks long enough for user to see
+    if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 50000) {
+        ledShouldBeOn = false;
+    }
+
     TCNT1 = 0;
     OCR1A = timerDelay;
 
@@ -137,13 +161,13 @@ void setup()
 {
     sensor.sleep(3); //wait for power to stabilize
 
-    pinMode(PIN_OB_LED, OUTPUT);
+    pinMode(PIN_LED, OUTPUT);
     
     if (!sensor.init()) {
         sensor.powerDown();
         while (1)
         {
-            flashOnboardLed(10);
+            flashLed(10);
             sensor.sleep(10000);
         }
     }
@@ -152,21 +176,21 @@ void setup()
 
     pinMode(PIN_TOUCH, INPUT);
     pinMode(PIN_ZERO, INPUT);
-    pinMode(PIN_LED, OUTPUT);
+    pinMode(PIN_RB_LED, OUTPUT);
     pinMode(PIN_TRIAC, OUTPUT);
 
     attachInterrupt(digitalPinToInterrupt(PIN_ZERO), zeroCross, RISING);
 
-    OCR1A = 0xFFFF; //16 msec
+    OCR1A = 0xFFFF;
     TCNT1 = 0;
     TIMSK1 = 1 << OCIE1A; //enable COMPA interrupt
     TIFR1 = 1 << OCF1A;   //clear any flag that may be there
     TCCR1A = 0;
-    TCCR1B = 1 << CS11; //(start 8 prescaler)
+    TCCR1B = 1 << CS11;   //(start 8 prescaler - 2MHz - 20000 "ticks" are 10ms or half sine duration)
 
     TCCR2A = 0;
     TCCR2B = 0;
-    TIMSK2 = (1 << OCIE2A) | (1 << TOIE2);
+    TIMSK2 = (1 << OCIE2A) | (1 << TOIE2); //enable COMPB and OVRFB
 
     sei();
 
@@ -174,14 +198,16 @@ void setup()
     sensor.send(&announce, 1);
     wdt_enable(WDTO_2S);
 
-    flashOnboardLed(3);
+    flashLed(3);
 }
 
 ISR(TIMER1_COMPA_vect)
 {
+    // reset counter
     TCNT1 = 0;
-    OCR1A = 20000;
+    OCR1A = 20000; // 10ms, half sine
 
+    // pulse triac (needs one classic light bulb to keep it on, not only leds)
     PORTD |= 1 << PIN_TRIAC;
     _delay_us(200);
     PORTD &= ~(1 << PIN_TRIAC);
@@ -189,17 +215,17 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER2_COMPA_vect)
 {
-    DDRD &= ~(1 << PIN_LED);
-    PORTD &= ~(1 << PIN_LED);
+    DDRD &= ~(1 << PIN_RB_LED);
+    PORTD &= ~(1 << PIN_RB_LED);
 }
 
 ISR(TIMER2_OVF_vect)
 {
-    updateLed();
-    DDRD |= 1 << PIN_LED;
+    DDRD |= 1 << PIN_RB_LED;
+    updateRBLed();
 }
 
-void setLedBrightness(uint8_t newLedBrightness)
+void setRBLedBrightness(uint8_t newLedBrightness)
 {
     if (newLedBrightness == ledBrightness)
         return;
@@ -211,10 +237,10 @@ void setLedBrightness(uint8_t newLedBrightness)
     {
         TCCR2B = 0;
         if (brightness && newLedBrightness)
-            DDRD |= 1 << PIN_LED;
+            DDRD |= 1 << PIN_RB_LED;
         else
-            DDRD &= ~(1 << PIN_LED);
-        updateLed();
+            DDRD &= ~(1 << PIN_RB_LED);
+        updateRBLed();
     }
     else
     {
@@ -273,7 +299,7 @@ bool handleTouchEvents()
                 {
                     brightness = 0;
                 }
-                updateLed();
+                updateRBLed();
             }
         }
         else
@@ -299,7 +325,7 @@ bool handleTouchEvents()
                     increaseLevel = !increaseLevel;
                 }
             }
-            updateLed();
+            updateRBLed();
         }
     }
     else if (touchState)
@@ -326,6 +352,8 @@ bool handleTouchEvents()
     return initialBrightness != brightness;
 }
 
+static bool ledIsOn = false;
+
 void loop()
 {
     wdt_reset();
@@ -340,6 +368,11 @@ void loop()
     if (handleTouchEvents())
     {
         sendState();
+    }
+
+    if (ledShouldBeOn != ledIsOn) {
+        digitalWrite(PIN_LED, ledShouldBeOn ? HIGH : LOW);
+        ledIsOn = ledShouldBeOn;
     }
 
     sensor.update();
