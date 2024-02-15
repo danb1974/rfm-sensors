@@ -24,6 +24,7 @@ Sensor sensor(false);
 #define RSP_INIT 1
 #define RSP_STATE 2
 
+static volatile uint8_t currentBrightness = 0;
 static volatile uint16_t timerDelay = 0xFFFF;
 static volatile uint8_t brightness;
 static volatile uint8_t mode = 0;
@@ -141,22 +142,20 @@ void zeroCross()
         ledShouldBeOn = false;
     }
 
+    uint8_t target = max(brightness, minBrightness);
+    if (currentBrightness != target)
+    {
+        if (currentBrightness < target)
+            currentBrightness++;
+        else if (currentBrightness > target)
+            currentBrightness--;
+
+    }
+
+    timerDelay = currentBrightness ? powerToTicks[currentBrightness - 1] : 0xFFFF;
+
     TCNT1 = 0;
     OCR1A = timerDelay;
-
-    static uint8_t current = 0;
-    uint8_t target = max(brightness, minBrightness);
-    if (current != target)
-    {
-        if (current < target)
-            current++;
-        else if (current > target)
-            current--;
-
-        timerDelay = current
-                         ? powerToTicks[current - 1]
-                         : 0xFFFF;
-    }
 }
 
 void setup()
