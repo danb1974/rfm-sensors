@@ -216,25 +216,22 @@ void setup()
 
 ISR(TIMER1_COMPA_vect)
 {
+    // 2000 = 1ms
+    #define END_OFFSET 4000
+
     switch (currentState)
     {
     case 1:
     case 3:
         PORTD |= 1 << PIN_TRIAC; // on
-
-        // temp until we figure out timing
-        //_delay_us(200);
-        //PORTD &= ~(1 << PIN_TRIAC);
-        // temp
-
         TCNT1 = 0;
-        OCR1A = 16000 - timerDelay;
+        OCR1A = 20000 - END_OFFSET - timerDelay;
         break;
 
     case 2:
         PORTD &= ~(1 << PIN_TRIAC); // off
         TCNT1 = 0;
-        OCR1A = timerDelay + 4000;
+        OCR1A = timerDelay + END_OFFSET;
         break;
 
     default:
