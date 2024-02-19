@@ -1,14 +1,12 @@
 const GAMMA = 2;
 
-// classic + led
 // philips led 8.5W LedLustre
 const MIN = 7.0e-3; //sec
-const MAX = 3.0e-3; //sec
+const MAX = 3.5e-3; //sec
 
-// classic + osram led filament 7W
-// classic + philips led 10.5W
+// modern led bulbs
 //const MIN = 6.2e-3; //sec
-//const MAX = 3.0e-3; //sec
+//const MAX = 3.5e-3; //sec
 
 const TIMER = 2e6;  //Hz
 
