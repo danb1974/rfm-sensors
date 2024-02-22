@@ -6,5 +6,6 @@
     "files.associations": {
         "hal.h": "c",
         "arduino.h": "c"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
