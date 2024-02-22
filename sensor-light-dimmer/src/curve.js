@@ -35,6 +35,7 @@ function genDelayMap(min, max, algo, comment) {
         );
     }
     console.log("};");
+    console.log();
 }
 
 genDelayMap(7.0e-3, 3.5e-3, 1, "Philips LedLustre, sinus + gamma curve");
