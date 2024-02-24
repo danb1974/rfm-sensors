@@ -11,7 +11,7 @@
             manualdimm: { value: false },
             maxbrightness: { value: 100, required: true, validate: function (n) { return n >= 10 && n <= 100 } },
             ledbrightness: { value: 255, required: true, validate: function (n) { return n >= 0 && n <= 255 } },
-
+            brightnesscurve: { value: 1, required: true, validate: function (n) { return n >= 1 && n <= 2 } },
         },
         inputs: 1,
         outputs: 1,
@@ -46,6 +46,10 @@
     <div class="form-row">
         <label for="node-input-ledbrightness" style="width:50%"><i class="fa fa-lightbulb-o"></i> Default LED brightness</label>
         <input type="text" id="node-input-ledbrightness" style="width:30%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-brightnesscurve" style="width:50%"><i class="fa fa-lightbulb-o"></i> Light curve index</label>
+        <input type="text" id="node-input-brightnesscurve" style="width:30%">
     </div>
     <div class="form-row">
         <label style="width:50%" for="node-input-manual"><i class="fa fa-arrow-right"></i> Allow manual control: </label>

@@ -35,7 +35,9 @@ module.exports = function (RED) {
             timer(timeSpan(1 + Math.random() * 3, 'sec')),
             nodeLayer.send(Buffer.from([3, mode, config.maxbrightness])), // set mode
             timer(timeSpan(1 + Math.random() * 3, 'sec')),
-            nodeLayer.send(Buffer.from([4, ledBrightness])), // set led bright
+            nodeLayer.send(Buffer.from([4, ledBrightness])), // set led brightness
+            timer(timeSpan(1 + Math.random() * 3, 'sec')),
+            nodeLayer.send(Buffer.from([6, config.brightnesscurve])), // set brightness curve
         );
 
         combineLatest([nodeLayer.connected, periodicSync])
