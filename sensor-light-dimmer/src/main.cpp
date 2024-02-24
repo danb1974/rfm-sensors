@@ -17,6 +17,7 @@ Sensor sensor(false);
 #define CMD_SET_MODE 3
 #define CMD_SET_LED 4
 #define CMD_MIN_LIGHT 5
+#define CMD_SET_CURVE 6
 
 #define MODE_MAN_DIMMER 0x01  //enable manual dimming
 #define MODE_DISABLE_MAN 0x02 //disable manual control
@@ -64,6 +65,39 @@ void sendState()
     sensor.send(send, sizeof(send));
 }
 
+static const uint8_t powerCurveCount = 2;
+static uint8_t powerCurveIndex = 0;
+static const uint16_t powerToTicks[powerCurveCount][100] = {
+    // Philips LedLustre, sinus + gamma curve
+    // from 7 to 3.5 algo 1
+    {
+        13998, 13993, 13984, 13972, 13957, 13938, 13916, 13890, 13861, 13829,
+        13793, 13754, 13712, 13667, 13619, 13567, 13513, 13455, 13395, 13332,
+        13266, 13197, 13125, 13051, 12975, 12896, 12815, 12731, 12645, 12557,
+        12467, 12375, 12282, 12186, 12089, 11990, 11890, 11788, 11686, 11582,
+        11476, 11370, 11264, 11156, 11048, 10939, 10829, 10720, 10610, 10500,
+        10390, 10280, 10171, 10061,  9952,  9844,  9736,  9630,  9524,  9418,
+        9314,  9212,  9110,  9010,  8911,  8814,  8718,  8625,  8533,  8443,
+        8355,  8269,  8185,  8104,  8025,  7949,  7875,  7803,  7734,  7668,
+        7605,  7545,  7487,  7433,  7381,  7333,  7288,  7246,  7207,  7171,
+        7139,  7110,  7084,  7062,  7043,  7028,  7016,  7007,  7002,  7000,
+    },
+    // Generic modern led, linear curve
+    // from 6.2 to 3.5 algo 3
+    {
+        12346, 12292, 12238, 12184, 12130, 12076, 12022, 11968, 11914, 11860,
+        11806, 11752, 11698, 11644, 11590, 11536, 11482, 11428, 11374, 11320,
+        11266, 11212, 11158, 11104, 11050, 10996, 10942, 10888, 10834, 10780,
+        10726, 10672, 10618, 10564, 10510, 10456, 10402, 10348, 10294, 10240,
+        10186, 10132, 10078, 10024,  9970,  9916,  9862,  9808,  9754,  9700,
+        9646,  9592,  9538,  9484,  9430,  9376,  9322,  9268,  9214,  9160,
+        9106,  9052,  8998,  8944,  8890,  8836,  8782,  8728,  8674,  8620,
+        8566,  8512,  8458,  8404,  8350,  8296,  8242,  8188,  8134,  8080,
+        8026,  7972,  7918,  7864,  7810,  7756,  7702,  7648,  7594,  7540,
+        7486,  7432,  7378,  7324,  7270,  7216,  7162,  7108,  7054,  7000,
+    }
+};
+
 void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
 {
     if (data[0] == CMD_SET && length == 2)
@@ -91,58 +125,16 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
     {
         minBrightness = data[1];
         minBrightnessReset = millis() + data[2] * 1000UL;
+    } else if (data[0] == CMD_SET_CURVE && length == 2) {
+        if (data[1] >= 1 && data[1] <= powerCurveCount) {
+            powerCurveIndex = data[1] - 1;
+        }
     }
 }
-
-// Philips LedLustre, sinus + gamma curve
-// from 7 to 3.5 algo 1
-// static const uint16_t powerToTicks[100] = {
-//     13998, 13993, 13984, 13972, 13957, 13938, 13916, 13890, 13861, 13829,
-//     13793, 13754, 13712, 13667, 13619, 13567, 13513, 13455, 13395, 13332,
-//     13266, 13197, 13125, 13051, 12975, 12896, 12815, 12731, 12645, 12557,
-//     12467, 12375, 12282, 12186, 12089, 11990, 11890, 11788, 11686, 11582,
-//     11476, 11370, 11264, 11156, 11048, 10939, 10829, 10720, 10610, 10500,
-//     10390, 10280, 10171, 10061,  9952,  9844,  9736,  9630,  9524,  9418,
-//      9314,  9212,  9110,  9010,  8911,  8814,  8718,  8625,  8533,  8443,
-//      8355,  8269,  8185,  8104,  8025,  7949,  7875,  7803,  7734,  7668,
-//      7605,  7545,  7487,  7433,  7381,  7333,  7288,  7246,  7207,  7171,
-//      7139,  7110,  7084,  7062,  7043,  7028,  7016,  7007,  7002,  7000,
-// };
-
-// Generic modern led, sinus curve
-// from 6.2 to 3.5 algo 2
-// static const uint16_t powerToTicks[100] = {
-//     12315, 12230, 12146, 12061, 11976, 11892, 11807, 11723, 11639, 11555,
-//     11472, 11388, 11305, 11222, 11139, 11057, 10975, 10893, 10812, 10731,
-//     10651, 10571, 10491, 10412, 10334, 10255, 10178, 10101, 10024,  9948,
-//      9873,  9799,  9725,  9651,  9579,  9507,  9435,  9365,  9295,  9226,
-//      9158,  9090,  9024,  8958,  8893,  8829,  8766,  8703,  8642,  8582,
-//      8522,  8464,  8406,  8349,  8294,  8239,  8186,  8133,  8082,  8031,
-//      7982,  7934,  7887,  7841,  7796,  7752,  7709,  7668,  7628,  7589,
-//      7551,  7514,  7478,  7444,  7411,  7379,  7349,  7319,  7291,  7264,
-//      7239,  7214,  7191,  7170,  7149,  7130,  7112,  7096,  7080,  7066,
-//      7054,  7043,  7033,  7024,  7017,  7011,  7006,  7003,  7001,  7000,
-// };
-
-// Generic modern led, linear curve
-// from 6.2 to 3.5 algo 3
-static const uint16_t powerToTicks[100] = {
-    12346, 12292, 12238, 12184, 12130, 12076, 12022, 11968, 11914, 11860,
-    11806, 11752, 11698, 11644, 11590, 11536, 11482, 11428, 11374, 11320,
-    11266, 11212, 11158, 11104, 11050, 10996, 10942, 10888, 10834, 10780,
-    10726, 10672, 10618, 10564, 10510, 10456, 10402, 10348, 10294, 10240,
-    10186, 10132, 10078, 10024,  9970,  9916,  9862,  9808,  9754,  9700,
-     9646,  9592,  9538,  9484,  9430,  9376,  9322,  9268,  9214,  9160,
-     9106,  9052,  8998,  8944,  8890,  8836,  8782,  8728,  8674,  8620,
-     8566,  8512,  8458,  8404,  8350,  8296,  8242,  8188,  8134,  8080,
-     8026,  7972,  7918,  7864,  7810,  7756,  7702,  7648,  7594,  7540,
-     7486,  7432,  7378,  7324,  7270,  7216,  7162,  7108,  7054,  7000,
-};
 
 static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
 static volatile uint32_t lastCrossUs = 0;
-static volatile bool maySkipCross = false;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
 // the triac interrupt handler schedules a second triac pulse after 10ms
@@ -150,20 +142,9 @@ void zeroCross()
 {
     uint32_t nowUs = micros();
 
-    // detect and ignore early pulse, but just one for now
-    if (maySkipCross && nowUs - lastCrossUs < 8000) {
-        maySkipCross = false;
-
-        if (!ledShouldBeOn) {
-            ledShouldBeOn = true;
-            ledIsOnSinceUs = nowUs;
-        }
-
-        return;
-    }
-
-    // detect and ignore noise, blink led
-    if (nowUs - lastCrossUs < 2000) {
+    // detect and ignore early pulses
+    // if we miss the real one bulb should briefly go dark
+    if (nowUs - lastCrossUs < 19500) {
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
             ledIsOnSinceUs = nowUs;
@@ -173,7 +154,6 @@ void zeroCross()
     }
 
     lastCrossUs = nowUs;
-    maySkipCross = true;
 
     // keep blinks long enough for user to see
     if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 50000) {
@@ -190,7 +170,7 @@ void zeroCross()
     }
 
     if (currentBrightness) {
-        timerDelay = powerToTicks[currentBrightness - 1];
+        timerDelay = powerToTicks[powerCurveIndex][currentBrightness - 1];
         currentState = 1;
     } else {
         timerDelay = 0xFFFF;
