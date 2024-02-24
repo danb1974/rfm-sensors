@@ -125,7 +125,9 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
     {
         minBrightness = data[1];
         minBrightnessReset = millis() + data[2] * 1000UL;
-    } else if (data[0] == CMD_SET_CURVE && length == 2) {
+    }
+    else if (data[0] == CMD_SET_CURVE && length == 2)
+    {
         if (data[1] >= 1 && data[1] <= powerCurveCount) {
             powerCurveIndex = data[1] - 1;
         }
