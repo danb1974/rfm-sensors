@@ -142,12 +142,25 @@ static const uint16_t powerToTicks[100] = {
 static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
 static volatile uint32_t lastCrossUs = 0;
+static volatile bool maySkipCross = false;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
 // the triac interrupt handler schedules a second triac pulse after 10ms
 void zeroCross()
 {
     uint32_t nowUs = micros();
+
+    // detect and ignore early pulse, but just one for now
+    if (maySkipCross && nowUs - lastCrossUs < 8000) {
+        maySkipCross = false;
+
+        if (!ledShouldBeOn) {
+            ledShouldBeOn = true;
+            ledIsOnSinceUs = nowUs;
+        }
+
+        return;
+    }
 
     // detect and ignore noise, blink led
     if (nowUs - lastCrossUs < 2000) {
@@ -158,7 +171,9 @@ void zeroCross()
 
         return;
     }
+
     lastCrossUs = nowUs;
+    maySkipCross = true;
 
     // keep blinks long enough for user to see
     if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 50000) {
