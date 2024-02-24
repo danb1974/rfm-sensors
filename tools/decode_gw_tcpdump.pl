@@ -85,6 +85,10 @@ sub process_packet {
 					print " set-min-light ", $bytes[3];
 					print " timeout ", $bytes[4];
 				}
+				elsif (scalar(@bytes) == 4 && $bytes[2] == 0x06) {
+					print " sensor-light-dimmer";
+					print " set-light-curve ", $bytes[3];
+				}
 
 				elsif (scalar(@bytes) == 3) {
 					print " one_byte ", $bytes[2];
