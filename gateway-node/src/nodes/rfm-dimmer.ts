@@ -32,11 +32,11 @@ module.exports = function (RED) {
 
         const syncState = () => concat(
             nodeLayer.send(Buffer.from([2])), // get status
-            timer(timeSpan(1 + Math.random() * 3, 'sec')),
+            timer(timeSpan(100 + Math.random() * 300, 'msec')),
             nodeLayer.send(Buffer.from([3, mode, config.maxbrightness])), // set mode
-            timer(timeSpan(1 + Math.random() * 3, 'sec')),
+            timer(timeSpan(100 + Math.random() * 300, 'msec')),
             nodeLayer.send(Buffer.from([4, ledBrightness])), // set led brightness
-            timer(timeSpan(1 + Math.random() * 3, 'sec')),
+            timer(timeSpan(100 + Math.random() * 300, 'msec')),
             nodeLayer.send(Buffer.from([6, config.brightnesscurve])), // set brightness curve
         );
 

@@ -24,7 +24,7 @@ function getBaseLayer(address: string, logger: Logger): ConnectableLayer<Buffer>
     }
 }
 
-export function timeSpan(value: number, unit: 'day' | 'hour' | 'min' | 'sec') {
+export function timeSpan(value: number, unit: 'day' | 'hour' | 'min' | 'sec' | 'msec') {
     if (unit === 'day') {
         value *= 24;
         unit = 'hour';
@@ -40,7 +40,12 @@ export function timeSpan(value: number, unit: 'day' | 'hour' | 'min' | 'sec') {
         unit = 'sec';
     }
 
-    return Math.round(value * 1000);
+    if (unit === 'sec') {
+        value *= 1000;
+        unit = 'msec';
+    }
+
+    return Math.round(value);
 }
 
 export function getPackageLayer(address: string, logger: Logger): PackageLayer {
