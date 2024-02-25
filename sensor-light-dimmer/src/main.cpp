@@ -231,10 +231,7 @@ void setup()
 ISR(TIMER1_COMPA_vect)
 {
     // 2000 = 1ms
-    // 2300 is too small
-    // 2500 seems to work with 5.5W led but not with classic
-    // 3000 does not work with 25W classic, 3200 works sometimes
-    // probably very much depending on the input voltage
+    // the zero cross interrupt is delayed by probably less than 2ms (approx 17:1 resistive divider)
     #define END_OFFSET 4000
 
     switch (currentState)
