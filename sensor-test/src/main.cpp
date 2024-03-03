@@ -27,13 +27,16 @@ void setup()
 
     sensor.sleep(1);
 
-    // your key here (16 bytes)
-    uint8_t key[16] = {};
-    sensor.init(53, 2, key, true, false);
+    if (!sensor.init()) {
+        sensor.powerDown();
+        while(1) {
+            flashLed(10);
+            delay(10000);
+        }
+    }
 
     // signal end of setup
     flashLed(3);
-    sensor.sleep(1);
 }
 
 void loop()
