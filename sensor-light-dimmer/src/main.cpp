@@ -3,6 +3,14 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
+// 2000 = 1ms
+// early zero cross threshold
+#define MIN_SINE_TICKS 19500
+// turn off triac before end of period
+// the zero cross interrupt is delayed by probably about 0.5ms
+// 20M:1.2M resistive divider from 324V sine peak considering input transition at 2.5V 
+#define TRIAC_OFF_BEFORE_TICKS 4000
+
 #define PIN_LED 9
 
 #define PIN_ZERO 3
@@ -146,7 +154,7 @@ void zeroCross()
 
     // detect and ignore early pulses
     // if we miss the real one bulb should briefly go dark
-    if (nowUs - lastCrossUs < 19500) {
+    if (nowUs - lastCrossUs < MIN_SINE_TICKS) {
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
             ledIsOnSinceUs = nowUs;
@@ -230,23 +238,19 @@ void setup()
 
 ISR(TIMER1_COMPA_vect)
 {
-    // 2000 = 1ms
-    // the zero cross interrupt is delayed by probably less than 2ms (approx 17:1 resistive divider)
-    #define END_OFFSET 4000
-
     switch (currentState)
     {
     case 1:
     case 3:
         PORTD |= 1 << PIN_TRIAC; // on
         TCNT1 = 0;
-        OCR1A = 20000 - END_OFFSET - timerDelay;
+        OCR1A = 20000 - TRIAC_OFF_BEFORE_TICKS - timerDelay;
         break;
 
     case 2:
         PORTD &= ~(1 << PIN_TRIAC); // off
         TCNT1 = 0;
-        OCR1A = timerDelay + END_OFFSET;
+        OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
         break;
 
     default:
