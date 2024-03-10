@@ -3,6 +3,8 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
+//#define BLINK_ON_ZERO_CROSS_ERRORS
+
 // early zero cross threshold
 #define IGNORE_ZERO_BEFORE_USEC 19500
 
@@ -144,8 +146,23 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
     }
 }
 
+static volatile bool triacIsOn = false;
+
+void triacOn() {
+    PORTD |= 1 << PIN_TRIAC; // on
+    triacIsOn = true;
+}
+
+void triacOff() {
+    PORTD &= ~(1 << PIN_TRIAC); // off
+    triacIsOn = false;
+}
+
+#ifdef BLINK_ON_ZERO_CROSS_ERRORS
 static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
+#endif
+
 static volatile uint32_t lastCrossUs = 0;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
@@ -154,13 +171,27 @@ void zeroCross()
 {
     uint32_t nowUs = micros();
 
-    // detect and ignore early pulses
-    // if we miss the real one bulb should briefly go dark
-    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC) {
+    // should not happen
+    if (triacIsOn) {
+        #ifdef BLINK_ON_ZERO_CROSS_ERRORS
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
             ledIsOnSinceUs = nowUs;
         }
+        #endif
+
+        return;
+    }
+
+    // detect and ignore early pulses
+    // if we miss the real one bulb should briefly go dark
+    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC) {
+        #ifdef BLINK_ON_ZERO_CROSS_ERRORS        
+        if (!ledShouldBeOn) {
+            ledShouldBeOn = true;
+            ledIsOnSinceUs = nowUs;
+        }
+        #endif
 
         return;
     }
@@ -168,9 +199,11 @@ void zeroCross()
     lastCrossUs = nowUs;
 
     // keep blinks long enough for user to see
+    #ifdef BLINK_ON_ZERO_CROSS_ERRORS
     if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 50000) {
         ledShouldBeOn = false;
     }
+    #endif
 
     uint8_t target = max(brightness, minBrightness);
     if (currentBrightness != target)
@@ -189,7 +222,8 @@ void zeroCross()
         currentState = 0;
     }
 
-    PORTD &= ~(1 << PIN_TRIAC); // off
+    triacOff(); // just to be sure
+
     TCNT1 = 0;
     OCR1A = timerDelay;
 }
@@ -244,19 +278,19 @@ ISR(TIMER1_COMPA_vect)
     {
     case 1:
     case 3:
-        PORTD |= 1 << PIN_TRIAC; // on
+        triacOn();
         TCNT1 = 0;
         OCR1A = HALF_PERIOD_TICKS - TRIAC_OFF_BEFORE_TICKS - timerDelay;
         break;
 
     case 2:
-        PORTD &= ~(1 << PIN_TRIAC); // off
+        triacOff();
         TCNT1 = 0;
         OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
         break;
 
     default:
-        PORTD &= ~(1 << PIN_TRIAC); // off
+        triacOff();
         TCNT1 = 0;
         OCR1A = 0xFFFF;
     }
@@ -404,7 +438,9 @@ bool handleTouchEvents()
     return initialBrightness != brightness;
 }
 
+#ifdef BLINK_ON_ZERO_CROSS_ERRORS
 static bool ledIsOn = false;
+#endif
 
 void loop()
 {
@@ -422,10 +458,12 @@ void loop()
         sendState();
     }
 
+    #ifdef BLINK_ON_ZERO_CROSS_ERRORS
     if (ledShouldBeOn != ledIsOn) {
         digitalWrite(PIN_LED, ledShouldBeOn ? HIGH : LOW);
         ledIsOn = ledShouldBeOn;
     }
+    #endif
 
     sensor.update();
 }
