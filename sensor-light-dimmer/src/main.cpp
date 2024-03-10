@@ -171,7 +171,7 @@ void zeroCross()
 {
     uint32_t nowUs = micros();
 
-    // should not happen
+    // should not happen - eject eject eject
     if (triacIsOn) {
         #ifdef BLINK_ON_ZERO_CROSS_ERRORS
         if (!ledShouldBeOn) {
@@ -179,6 +179,11 @@ void zeroCross()
             ledIsOnSinceUs = nowUs;
         }
         #endif
+
+        triacOff();
+
+        TCNT1 = 0;
+        OCR1A = 0xFFFF;
 
         return;
     }
@@ -222,8 +227,6 @@ void zeroCross()
         currentState = 0;
     }
 
-    triacOff(); // just to be sure
-
     TCNT1 = 0;
     OCR1A = timerDelay;
 }
@@ -250,8 +253,6 @@ void setup()
     pinMode(PIN_RB_LED, OUTPUT);
     pinMode(PIN_TRIAC, OUTPUT);
 
-    attachInterrupt(digitalPinToInterrupt(PIN_ZERO), zeroCross, RISING);
-
     OCR1A = 0xFFFF;
     TCNT1 = 0;
     TIMSK1 = 1 << OCIE1A; //enable COMPA interrupt
@@ -263,10 +264,11 @@ void setup()
     TCCR2B = 0;
     TIMSK2 = (1 << OCIE2A) | (1 << TOIE2); //enable COMPB and OVRFB
 
-    sei();
+    attachInterrupt(digitalPinToInterrupt(PIN_ZERO), zeroCross, RISING);
 
     uint8_t announce = RSP_INIT;
     sensor.send(&announce, 1);
+
     wdt_enable(WDTO_2S);
 
     flashLed(3);
