@@ -3,10 +3,12 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
-//#define BLINK_ON_ZERO_CROSS_ERRORS
+#define BLINK_ON_ZERO_CROSS_ERRORS
 
 // early zero cross threshold
 #define IGNORE_ZERO_BEFORE_USEC 19500
+// how many full cycles to go without being synced to zero cross
+#define UNSYNCED_CYCLES 1
 
 // 2000 = 1ms
 #define HALF_PERIOD_TICKS 20000
@@ -180,11 +182,6 @@ void zeroCross()
         }
         #endif
 
-        triacOff();
-
-        TCNT1 = 0;
-        OCR1A = 0xFFFF;
-
         return;
     }
 
@@ -205,7 +202,7 @@ void zeroCross()
 
     // keep blinks long enough for user to see
     #ifdef BLINK_ON_ZERO_CROSS_ERRORS
-    if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 50000) {
+    if (ledShouldBeOn && nowUs - ledIsOnSinceUs > 20000) {
         ledShouldBeOn = false;
     }
     #endif
@@ -276,29 +273,31 @@ void setup()
 
 ISR(TIMER1_COMPA_vect)
 {
-    switch (currentState)
-    {
-    case 1:
-    case 3:
-        triacOn();
-        TCNT1 = 0;
-        OCR1A = HALF_PERIOD_TICKS - TRIAC_OFF_BEFORE_TICKS - timerDelay;
-        break;
-
-    case 2:
+    if (currentState == 0) {
         triacOff();
-        TCNT1 = 0;
-        OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
-        break;
-
-    default:
-        triacOff();
+        
         TCNT1 = 0;
         OCR1A = 0xFFFF;
+
+        return;
     }
 
-    if (currentState > 0) currentState++;
-    if (currentState > 3) currentState = 0;
+    if ((currentState & 0x01) == 1) {
+        triacOn();
+
+        TCNT1 = 0;
+        OCR1A = HALF_PERIOD_TICKS - TRIAC_OFF_BEFORE_TICKS - timerDelay;
+    } else {
+        triacOff();
+
+        TCNT1 = 0;
+        OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
+    }
+
+    currentState++;
+    if (currentState > 3 + 4 * UNSYNCED_CYCLES) {
+        currentState = 0;
+    }
 }
 
 ISR(TIMER2_COMPA_vect)
