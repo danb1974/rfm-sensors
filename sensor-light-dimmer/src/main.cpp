@@ -7,8 +7,10 @@
 
 // early zero cross threshold
 #define IGNORE_ZERO_BEFORE_USEC 19500
+// out of sync zero cross threshold
+#define IGNORE_ZERO_PRECISION_USEC 1000
 // how many full cycles to go without being synced to zero cross
-#define UNSYNCED_CYCLES 1
+#define UNSYNCED_CYCLES 10
 
 // 2000 = 1ms
 #define HALF_PERIOD_TICKS 20000
@@ -165,6 +167,66 @@ static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
 #endif
 
+#define ZERO_CROSS_PULSES 10
+static volatile uint8_t zeroCrossPulseIdx = 0;
+static volatile uint16_t zeroCrossPulses[ZERO_CROSS_PULSES];
+
+void initZeroCrossPulses() {
+    for (uint8_t i = 0; i < ZERO_CROSS_PULSES; i++) {
+        zeroCrossPulses[i] = 0;
+    }
+}
+
+#define PULSE_USEC_DIVIDER 256
+
+bool validPulse(unsigned long pulseLong) {
+    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
+
+    // no zero values please
+    if (pulse == 0) {
+        pulse = 1;
+    }
+
+    uint8_t hits = 0;
+    for (uint8_t i = 0; i < ZERO_CROSS_PULSES; i++) {
+        uint16_t zeroCrossPulse = zeroCrossPulses[i];
+
+        // compute first to keep loop timing as constant as possible
+        uint16_t offset = abs(pulse - zeroCrossPulse) % (20000 / PULSE_USEC_DIVIDER);
+        if (offset >= 10000 / PULSE_USEC_DIVIDER) {
+            offset = 20000 / PULSE_USEC_DIVIDER - offset;
+        }
+
+        if (zeroCrossPulse == 0) {
+            // not enough data, handle as if it were
+            hits++;
+            continue;
+        } else if (pulse == zeroCrossPulse) {
+            // this is us, ignore
+            continue;
+        } else if (offset < IGNORE_ZERO_PRECISION_USEC / PULSE_USEC_DIVIDER) {
+            // this one looks legit
+            hits++;
+        }
+    }
+
+    return hits > ZERO_CROSS_PULSES / 2;
+}
+
+void storePulse(unsigned long pulseLong) {
+    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
+
+    // no zero values please
+    if (pulse == 0) {
+        pulse = 1;
+    }
+
+    zeroCrossPulses[zeroCrossPulseIdx++] = pulse;
+    if (zeroCrossPulseIdx >= ZERO_CROSS_PULSES) {
+        zeroCrossPulseIdx = 0;
+    }
+}
+
 static volatile uint32_t lastCrossUs = 0;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
@@ -173,22 +235,10 @@ void zeroCross()
 {
     uint32_t nowUs = micros();
 
-    // should not happen - eject eject eject
-    if (triacIsOn) {
+    storePulse(nowUs);
+
+    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC || !validPulse(nowUs)) {
         #ifdef BLINK_ON_ZERO_CROSS_ERRORS
-        if (!ledShouldBeOn) {
-            ledShouldBeOn = true;
-            ledIsOnSinceUs = nowUs;
-        }
-        #endif
-
-        return;
-    }
-
-    // detect and ignore early pulses
-    // if we miss the real one bulb should briefly go dark
-    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC) {
-        #ifdef BLINK_ON_ZERO_CROSS_ERRORS        
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
             ledIsOnSinceUs = nowUs;
@@ -242,6 +292,8 @@ void setup()
             sensor.sleep(10000);
         }
     }
+
+    initZeroCrossPulses();
     
     sensor.onMessage(onData);
 
