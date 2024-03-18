@@ -38,6 +38,6 @@ function genDelayMap(min, max, algo, comment) {
     console.log();
 }
 
-genDelayMap(7.0e-3, 3.5e-3, 1, "Philips LedLustre, sinus + gamma curve");
-genDelayMap(6.2e-3, 3.5e-3, 2, "Generic modern led, sinus curve");
-genDelayMap(6.2e-3, 3.5e-3, 3, "Generic modern led, linear curve");
+genDelayMap(7.0e-3, 3.8e-3, 1, "Philips LedLustre, sinus + gamma curve");
+genDelayMap(6.2e-3, 3.8e-3, 2, "Generic modern led, sinus curve");
+genDelayMap(6.2e-3, 3.8e-3, 3, "Generic modern led, linear curve");
