@@ -259,6 +259,7 @@ void storePulse(unsigned long pulseLong) {
 }
 
 static volatile uint32_t lastCrossUs = 0;
+static volatile uint8_t crossSequence = 0;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
 // the triac interrupt handler schedules a second triac pulse after 10ms
@@ -280,6 +281,7 @@ void zeroCross()
     }
 
     lastCrossUs = nowUs;
+    crossSequence++;
 
     // keep blinks long enough for user to see
     #ifdef BLINK_ON_ZERO_CROSS_ERRORS
@@ -289,7 +291,7 @@ void zeroCross()
     #endif
 
     uint8_t target = max(brightness, minBrightness);
-    if (currentBrightness != target)
+    if (currentBrightness != target && (currentBrightness > 20 || crossSequence & 0x01))
     {
         if (currentBrightness < target)
             currentBrightness++;
