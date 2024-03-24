@@ -7,10 +7,8 @@
 
 // early zero cross threshold
 #define IGNORE_ZERO_BEFORE_USEC 19500
-// out of sync zero cross threshold
-#define IGNORE_ZERO_PRECISION_USEC 1000
 // how many full cycles to go without being synced to zero cross
-#define UNSYNCED_CYCLES 10
+#define UNSYNCED_CYCLES 1
 
 // 2000 = 1ms
 #define HALF_PERIOD_TICKS 20000
@@ -81,7 +79,7 @@ void sendState()
     sensor.send(send, sizeof(send));
 }
 
-static const uint8_t powerCurveCount = 4;
+static const uint8_t powerCurveCount = 2;
 static uint8_t powerCurveIndex = 0;
 static const uint16_t powerToTicks[powerCurveCount][100] = {
     // Philips LedLustre, sinus + gamma curve
@@ -93,12 +91,11 @@ static const uint16_t powerToTicks[powerCurveCount][100] = {
         12467, 12375, 12282, 12186, 12089, 11990, 11890, 11788, 11686, 11582,
         11476, 11370, 11264, 11156, 11048, 10939, 10829, 10720, 10610, 10500,
         10390, 10280, 10171, 10061,  9952,  9844,  9736,  9630,  9524,  9418,
-         9314,  9212,  9110,  9010,  8911,  8814,  8718,  8625,  8533,  8443,
-         8355,  8269,  8185,  8104,  8025,  7949,  7875,  7803,  7734,  7668,
-         7605,  7545,  7487,  7433,  7381,  7333,  7288,  7246,  7207,  7171,
-         7139,  7110,  7084,  7062,  7043,  7028,  7016,  7007,  7002,  7000,
+        9314,  9212,  9110,  9010,  8911,  8814,  8718,  8625,  8533,  8443,
+        8355,  8269,  8185,  8104,  8025,  7949,  7875,  7803,  7734,  7668,
+        7605,  7545,  7487,  7433,  7381,  7333,  7288,  7246,  7207,  7171,
+        7139,  7110,  7084,  7062,  7043,  7028,  7016,  7007,  7002,  7000,
     },
-
     // Generic modern led, linear curve
     // from 6.2 to 3.5 algo 3
     {
@@ -107,140 +104,60 @@ static const uint16_t powerToTicks[powerCurveCount][100] = {
         11266, 11212, 11158, 11104, 11050, 10996, 10942, 10888, 10834, 10780,
         10726, 10672, 10618, 10564, 10510, 10456, 10402, 10348, 10294, 10240,
         10186, 10132, 10078, 10024,  9970,  9916,  9862,  9808,  9754,  9700,
-         9646,  9592,  9538,  9484,  9430,  9376,  9322,  9268,  9214,  9160,
-         9106,  9052,  8998,  8944,  8890,  8836,  8782,  8728,  8674,  8620,
-         8566,  8512,  8458,  8404,  8350,  8296,  8242,  8188,  8134,  8080,
-         8026,  7972,  7918,  7864,  7810,  7756,  7702,  7648,  7594,  7540,
-         7486,  7432,  7378,  7324,  7270,  7216,  7162,  7108,  7054,  7000,
-    },
-
-    // Philips LedLustre, sinus + gamma curve
-    // from 7 to 3.8 algo 1
-    {
-        13998, 13994, 13986, 13975, 13961, 13943, 13923, 13899, 13873, 13843,
-        13811, 13775, 13737, 13695, 13651, 13604, 13554, 13502, 13447, 13389,
-        13328, 13266, 13200, 13133, 13063, 12991, 12916, 12840, 12761, 12681,
-        12599, 12515, 12429, 12342, 12253, 12162, 12071, 11978, 11884, 11789,
-        11693, 11596, 11498, 11400, 11301, 11201, 11101, 11001, 10901, 10800,
-        10699, 10599, 10499, 10399, 10299, 10200, 10102, 10004,  9907,  9811,
-         9716,  9622,  9529,  9438,  9347,  9258,  9171,  9085,  9001,  8919,
-         8839,  8760,  8684,  8609,  8537,  8467,  8400,  8334,  8272,  8211,
-         8153,  8098,  8046,  7996,  7949,  7905,  7863,  7825,  7789,  7757,
-         7727,  7701,  7677,  7657,  7639,  7625,  7614,  7606,  7602,  7600,
-    },
-
-    // Generic modern led, linear curve
-    // from 6.2 to 3.8 algo 3
-    {
-        12352, 12304, 12256, 12208, 12160, 12112, 12064, 12016, 11968, 11920,
-        11872, 11824, 11776, 11728, 11680, 11632, 11584, 11536, 11488, 11440,
-        11392, 11344, 11296, 11248, 11200, 11152, 11104, 11056, 11008, 10960,
-        10912, 10864, 10816, 10768, 10720, 10672, 10624, 10576, 10528, 10480,
-        10432, 10384, 10336, 10288, 10240, 10192, 10144, 10096, 10048, 10000,
-         9952,  9904,  9856,  9808,  9760,  9712,  9664,  9616,  9568,  9520,
-         9472,  9424,  9376,  9328,  9280,  9232,  9184,  9136,  9088,  9040,
-         8992,  8944,  8896,  8848,  8800,  8752,  8704,  8656,  8608,  8560,
-         8512,  8464,  8416,  8368,  8320,  8272,  8224,  8176,  8128,  8080,
-         8032,  7984,  7936,  7888,  7840,  7792,  7744,  7696,  7648,  7600,
+        9646,  9592,  9538,  9484,  9430,  9376,  9322,  9268,  9214,  9160,
+        9106,  9052,  8998,  8944,  8890,  8836,  8782,  8728,  8674,  8620,
+        8566,  8512,  8458,  8404,  8350,  8296,  8242,  8188,  8134,  8080,
+        8026,  7972,  7918,  7864,  7810,  7756,  7702,  7648,  7594,  7540,
+        7486,  7432,  7378,  7324,  7270,  7216,  7162,  7108,  7054,  7000,
     }
 };
 
-// void onDataOld(const uint8_t *data, uint8_t length, uint8_t rssi)
-// {
-//     if (data[0] == CMD_SET && length == 2)
-//     {
-//         brightness = data[1];
-//         if (brightness > 100)
-//             brightness = 100;
-//         updateRBLed();
-//     }
-//     else if (data[0] == CMD_GET && length == 1)
-//     {
-//         sendState();
-//     }
-//     else if (data[0] == CMD_SET_MODE && length == 3)
-//     {
-//         mode = data[1];
-//         modeNoDimmerBrightness = data[2];
-//         if (modeNoDimmerBrightness > 100)
-//             modeNoDimmerBrightness = 100;
-//     }
-//     else if (data[0] == CMD_SET_LED && length == 2)
-//     {
-//         setRBLedBrightness(data[1]);
-//     }
-//     else if (data[0] == CMD_MIN_LIGHT && length == 3)
-//     {
-//         minBrightness = data[1];
-//         if (minBrightness > 100)
-//             minBrightness = 100;
-//         minBrightnessReset = millis() + data[2] * 1000UL;
-//     }
-//     else if (data[0] == CMD_SET_CURVE && length == 2)
-//     {
-//         powerCurveIndex = data[1] - 1;
-//         if (powerCurveIndex > powerCurveCount - 1)
-//             powerCurveIndex = 0;
-//     }
-// }
-
 void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
 {
-    for (uint8_t offset = 0; offset < length; offset++) {
-        switch (data[offset])
-        {
-            case CMD_SET:
-                brightness = data[offset + 1];
-                if (brightness > 100) {
-                    brightness = 100;
-                }
-                offset += 1;
-                break;
-
-            case CMD_GET:
-                sendState();
-                break;
-
-            case CMD_SET_MODE:
-                mode = data[offset + 1];
-                modeNoDimmerBrightness = data[offset + 2];
-                if (modeNoDimmerBrightness > 100) {
-                    modeNoDimmerBrightness = 100;
-                }
-                offset += 2;
-                break;
-
-            case CMD_SET_LED:
-                setRBLedBrightness(data[offset + 1]);
-                offset += 1;
-                break;
-
-            case CMD_MIN_LIGHT:
-                minBrightness = data[offset + 1];
-                if (minBrightness > 100) {
-                    minBrightness = 100;
-                }
-                minBrightnessReset = millis() + data[offset + 2] * 1000UL;
-                offset += 2;
-                break;
-
-            case CMD_SET_CURVE:
-                powerCurveIndex = data[offset + 1] - 1;
-                if (powerCurveIndex > powerCurveCount - 1) {
-                    powerCurveIndex = 0;
-                }
-                offset += 1;
-                break;
+    if (data[0] == CMD_SET && length == 2)
+    {
+        if (data[1] > 100)
+            brightness = 100;
+        else
+            brightness = data[1];
+        updateRBLed();
+    }
+    else if (data[0] == CMD_GET && length == 1)
+    {
+        sendState();
+    }
+    else if (data[0] == CMD_SET_MODE && length == 3)
+    {
+        mode = data[1];
+        modeNoDimmerBrightness = data[2];
+    }
+    else if (data[0] == CMD_SET_LED && length == 2)
+    {
+        setRBLedBrightness(data[1]);
+    }
+    else if (data[0] == CMD_MIN_LIGHT && length == 3)
+    {
+        minBrightness = data[1];
+        minBrightnessReset = millis() + data[2] * 1000UL;
+    }
+    else if (data[0] == CMD_SET_CURVE && length == 2)
+    {
+        if (data[1] >= 1 && data[1] <= powerCurveCount) {
+            powerCurveIndex = data[1] - 1;
         }
     }
 }
 
+static volatile bool triacIsOn = false;
+
 void triacOn() {
     PORTD |= 1 << PIN_TRIAC; // on
+    triacIsOn = true;
 }
 
 void triacOff() {
     PORTD &= ~(1 << PIN_TRIAC); // off
+    triacIsOn = false;
 }
 
 #ifdef BLINK_ON_ZERO_CROSS_ERRORS
@@ -248,68 +165,7 @@ static volatile bool ledShouldBeOn = false;
 static volatile uint32_t ledIsOnSinceUs = 0;
 #endif
 
-#define ZERO_CROSS_PULSES 10
-static volatile uint8_t zeroCrossPulseIdx = 0;
-static volatile uint16_t zeroCrossPulses[ZERO_CROSS_PULSES];
-
-void initZeroCrossPulses() {
-    for (uint8_t i = 0; i < ZERO_CROSS_PULSES; i++) {
-        zeroCrossPulses[i] = 0;
-    }
-}
-
-#define PULSE_USEC_DIVIDER 256
-
-bool validPulse(unsigned long pulseLong) {
-    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
-
-    // no zero values please
-    if (pulse == 0) {
-        pulse = 1;
-    }
-
-    uint8_t hits = 0;
-    for (uint8_t i = 0; i < ZERO_CROSS_PULSES; i++) {
-        uint16_t zeroCrossPulse = zeroCrossPulses[i];
-
-        // compute first to keep loop timing as constant as possible
-        uint16_t offset = abs(pulse - zeroCrossPulse) % (20000 / PULSE_USEC_DIVIDER);
-        if (offset >= 10000 / PULSE_USEC_DIVIDER) {
-            offset = 20000 / PULSE_USEC_DIVIDER - offset;
-        }
-
-        if (zeroCrossPulse == 0) {
-            // not enough data, handle as if it were
-            hits++;
-            continue;
-        } else if (pulse == zeroCrossPulse) {
-            // this is us, ignore
-            continue;
-        } else if (offset < IGNORE_ZERO_PRECISION_USEC / PULSE_USEC_DIVIDER) {
-            // this one looks legit
-            hits++;
-        }
-    }
-
-    return hits > ZERO_CROSS_PULSES / 2;
-}
-
-void storePulse(unsigned long pulseLong) {
-    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
-
-    // no zero values please
-    if (pulse == 0) {
-        pulse = 1;
-    }
-
-    zeroCrossPulses[zeroCrossPulseIdx++] = pulse;
-    if (zeroCrossPulseIdx >= ZERO_CROSS_PULSES) {
-        zeroCrossPulseIdx = 0;
-    }
-}
-
 static volatile uint32_t lastCrossUs = 0;
-static volatile uint8_t crossSequence = 0;
 
 // WARNING zero cross only happens each 20ms since only one of the transitions is detected
 // the triac interrupt handler schedules a second triac pulse after 10ms
@@ -317,9 +173,8 @@ void zeroCross()
 {
     uint32_t nowUs = micros();
 
-    storePulse(nowUs);
-
-    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC || !validPulse(nowUs)) {
+    // should not happen - eject eject eject
+    if (triacIsOn) {
         #ifdef BLINK_ON_ZERO_CROSS_ERRORS
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
@@ -330,8 +185,20 @@ void zeroCross()
         return;
     }
 
+    // detect and ignore early pulses
+    // if we miss the real one bulb should briefly go dark
+    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC) {
+        #ifdef BLINK_ON_ZERO_CROSS_ERRORS        
+        if (!ledShouldBeOn) {
+            ledShouldBeOn = true;
+            ledIsOnSinceUs = nowUs;
+        }
+        #endif
+
+        return;
+    }
+
     lastCrossUs = nowUs;
-    crossSequence++;
 
     // keep blinks long enough for user to see
     #ifdef BLINK_ON_ZERO_CROSS_ERRORS
@@ -341,7 +208,7 @@ void zeroCross()
     #endif
 
     uint8_t target = max(brightness, minBrightness);
-    if (currentBrightness != target && crossSequence & 0x01)
+    if (currentBrightness != target)
     {
         if (currentBrightness < target)
             currentBrightness++;
@@ -375,8 +242,6 @@ void setup()
             sensor.sleep(10000);
         }
     }
-
-    initZeroCrossPulses();
     
     sensor.onMessage(onData);
 
