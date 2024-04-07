@@ -31,13 +31,11 @@ module.exports = function (RED) {
         if (!config.manual) { mode |= 0x02; }
 
         const syncState = () => concat(
-            nodeLayer.send(Buffer.from([2])), // get status
-            timer(timeSpan(100 + Math.random() * 300, 'msec')),
-            nodeLayer.send(Buffer.from([3, mode, config.maxbrightness])), // set mode
-            timer(timeSpan(100 + Math.random() * 300, 'msec')),
-            nodeLayer.send(Buffer.from([4, ledBrightness])), // set led brightness
-            timer(timeSpan(100 + Math.random() * 300, 'msec')),
-            nodeLayer.send(Buffer.from([6, config.brightnesscurve])), // set brightness curve
+            // get status
+            nodeLayer.send(Buffer.from([2])),
+            timer(timeSpan(100 + Math.random() * 100, 'msec')),
+            // send config
+            nodeLayer.send(Buffer.from([3, mode, config.maxbrightness, 4, ledBrightness, 6, config.brightnesscurve])),
         );
 
         combineLatest([nodeLayer.connected, periodicSync])
