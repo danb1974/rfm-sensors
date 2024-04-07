@@ -3,7 +3,7 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
-#define BLINK_ON_ZERO_CROSS_ERRORS
+//#define BLINK_ON_ZERO_CROSS_ERRORS
 
 // early zero cross threshold
 #define IGNORE_ZERO_BEFORE_USEC 19500
@@ -235,11 +235,11 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
     }
 }
 
-void triacOn() {
+inline void triacOn() {
     PORTD |= 1 << PIN_TRIAC; // on
 }
 
-void triacOff() {
+inline void triacOff() {
     PORTD &= ~(1 << PIN_TRIAC); // off
 }
 
@@ -260,9 +260,7 @@ void initZeroCrossPulses() {
 
 #define PULSE_USEC_DIVIDER 256
 
-bool validPulse(unsigned long pulseLong) {
-    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
-
+bool validPulse(uint16_t pulse) {
     // no zero values please
     if (pulse == 0) {
         pulse = 1;
@@ -294,9 +292,7 @@ bool validPulse(unsigned long pulseLong) {
     return hits > ZERO_CROSS_PULSES / 2;
 }
 
-void storePulse(unsigned long pulseLong) {
-    uint16_t pulse = (pulseLong / PULSE_USEC_DIVIDER) & 0xffff;
-
+void storePulse(uint16_t pulse) {
     // no zero values please
     if (pulse == 0) {
         pulse = 1;
@@ -316,10 +312,11 @@ static volatile uint8_t crossSequence = 0;
 void zeroCross()
 {
     uint32_t nowUs = micros();
+    uint16_t pulse = (nowUs / PULSE_USEC_DIVIDER) & 0xffff;
 
-    storePulse(nowUs);
+    storePulse(pulse);
 
-    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC || !validPulse(nowUs)) {
+    if (nowUs - lastCrossUs < IGNORE_ZERO_BEFORE_USEC || !validPulse(pulse)) {
         #ifdef BLINK_ON_ZERO_CROSS_ERRORS
         if (!ledShouldBeOn) {
             ledShouldBeOn = true;
@@ -341,7 +338,7 @@ void zeroCross()
     #endif
 
     uint8_t target = max(brightness, minBrightness);
-    if (currentBrightness != target && crossSequence & 0x01)
+    if (currentBrightness != target/* && crossSequence & 0x01*/)
     {
         if (currentBrightness < target)
             currentBrightness++;
