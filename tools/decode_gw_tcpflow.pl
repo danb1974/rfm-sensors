@@ -93,6 +93,14 @@ sub process_packet {
 					print " sensor-light-dimmer";
 					print " set-light-curve ", $bytes[3];
 				}
+				elsif (scalar(@bytes) == 9 && $bytes[2] == 0x03 && $bytes[5] == 0x04 && $bytes[7] == 0x06) {
+					print " sensor-light-dimmer";
+					print " set-mode ", $bytes[3];
+					print " mode-no-dimmer ", $bytes[4];
+					print " set-led ", $bytes[6];
+					print " set-light-curve ", $bytes[8];
+				}
+
 
 				elsif (scalar(@bytes) == 3) {
 					print " one_byte ", $bytes[2];
