@@ -20,7 +20,7 @@ void flashLed(uint8_t count)
     }
 }
 
-void inputStateChanged()
+void motionDetected()
 {
     sensor.wake();
 }
@@ -57,26 +57,47 @@ void setup()
     flashLed(3);
 }
 
-void loop()
-{
-    uint8_t msg[7] = {'B', 0, 'L', 0, 0, 'S', 0};
+bool isMotionActive() {
+    return digitalRead(PIN_INPUT);
+}
+
+static uint8_t msg[7] = {'B', 0, 'L', 0, 0, 'S', 0};
+
+void updateVoltage() {
     uint16_t voltage = sensor.readVoltage();
     msg[1] = voltage / 10 - 100;
+}
 
+void updateLight() {
     uint16_t light = max44009.getMeasurement();
     msg[3] = light >> 8;
     msg[4] = light;
+}
 
-    uint8_t state = digitalRead(PIN_INPUT);
+void updateMotion() {
+    uint8_t state = isMotionActive();
     msg[6] = state;
+}
 
-    sensor.powerUp();
-    sensor.sendAndWait(msg, sizeof(msg));
-    sensor.powerDown();
-    sensor.sleep(10);
+void updateAll() {
+    updateVoltage();
+    updateLight();
+    updateMotion();
+}
+
+void loop()
+{
+    do {
+        updateAll();
+
+        sensor.powerUp();
+        sensor.sendAndWait(msg, sizeof(msg));
+        sensor.powerDown();
+        sensor.sleep(30);
+    } while (isMotionActive());
 
     EIFR = 0x03; // clear INT0/INT1
-    attachInterrupt(digitalPinToInterrupt(PIN_INPUT), inputStateChanged, RISING);
-    sensor.sleep(1800); // 30 min
+    attachInterrupt(digitalPinToInterrupt(PIN_INPUT), motionDetected, RISING);
+    sensor.sleep(1800);
     detachInterrupt(digitalPinToInterrupt(PIN_INPUT));
 }
