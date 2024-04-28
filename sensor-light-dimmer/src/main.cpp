@@ -145,45 +145,6 @@ static const uint16_t powerToTicks[powerCurveCount][100] = {
     }
 };
 
-// void onDataOld(const uint8_t *data, uint8_t length, uint8_t rssi)
-// {
-//     if (data[0] == CMD_SET && length == 2)
-//     {
-//         brightness = data[1];
-//         if (brightness > 100)
-//             brightness = 100;
-//         updateRBLed();
-//     }
-//     else if (data[0] == CMD_GET && length == 1)
-//     {
-//         sendState();
-//     }
-//     else if (data[0] == CMD_SET_MODE && length == 3)
-//     {
-//         mode = data[1];
-//         modeNoDimmerBrightness = data[2];
-//         if (modeNoDimmerBrightness > 100)
-//             modeNoDimmerBrightness = 100;
-//     }
-//     else if (data[0] == CMD_SET_LED && length == 2)
-//     {
-//         setRBLedBrightness(data[1]);
-//     }
-//     else if (data[0] == CMD_MIN_LIGHT && length == 3)
-//     {
-//         minBrightness = data[1];
-//         if (minBrightness > 100)
-//             minBrightness = 100;
-//         minBrightnessReset = millis() + data[2] * 1000UL;
-//     }
-//     else if (data[0] == CMD_SET_CURVE && length == 2)
-//     {
-//         powerCurveIndex = data[1] - 1;
-//         if (powerCurveIndex > powerCurveCount - 1)
-//             powerCurveIndex = 0;
-//     }
-// }
-
 void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
 {
     for (uint8_t offset = 0; offset < length; offset++) {
@@ -231,6 +192,10 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
                 }
                 offset += 1;
                 break;
+                
+            default:
+                // command not supported, skip rest of buffer
+                offset = length;
         }
     }
 }
