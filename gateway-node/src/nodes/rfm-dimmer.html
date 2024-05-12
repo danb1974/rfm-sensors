@@ -11,7 +11,7 @@
             manualdimm: { value: false },
             maxbrightness: { value: 100, required: true, validate: function (n) { return n >= 10 && n <= 100 } },
             ledbrightness: { value: 255, required: true, validate: function (n) { return n >= 0 && n <= 255 } },
-            brightnesscurve: { value: 1, required: true, validate: function (n) { return n >= 1 && n <= 9 } },
+            brightnesscurve: { value: 1, required: true, validate: function (n) { return (n & 0x7f) >= 1 && (n & 0x7f) <= 9 } },
         },
         inputs: 1,
         outputs: 1,
