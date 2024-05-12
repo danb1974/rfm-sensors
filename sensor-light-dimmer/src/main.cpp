@@ -18,6 +18,8 @@
 // the zero cross interrupt is delayed by probably about 0.5ms but zero cross depends on bulb current curve
 // 20M:1.2M resistive divider from 324V sine peak considering input transition at 2.5V
 #define TRIAC_OFF_BEFORE_TICKS 4000
+// (when using) length of short pulses to turn triac on (classic bulbs only)
+#define SHORT_TRIAC_PULSE 200
 
 #define PIN_LED 9
 
@@ -47,6 +49,7 @@ static volatile uint16_t timerDelay = 0xFFFF;
 static volatile uint8_t brightness;
 static volatile uint8_t mode = 0;
 static volatile uint8_t modeNoDimmerBrightness = 100;
+static volatile uint8_t triacShortPulseMode = 0;
 
 static uint8_t ledBrightness = 255;
 static uint8_t minBrightness = 0;
@@ -187,6 +190,13 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
 
             case CMD_SET_CURVE:
                 powerCurveIndex = data[offset + 1] - 1;
+
+                triacShortPulseMode = 0;
+                if (powerCurveIndex > 128) {
+                    powerCurveIndex -= 128;
+                    triacShortPulseMode = 1;
+                }
+
                 if (powerCurveIndex > powerCurveCount - 1) {
                     powerCurveIndex = 0;
                 }
@@ -383,12 +393,20 @@ ISR(TIMER1_COMPA_vect)
         triacOn();
 
         TCNT1 = 0;
-        OCR1A = HALF_PERIOD_TICKS - TRIAC_OFF_BEFORE_TICKS - timerDelay;
+        if (triacShortPulseMode) {
+            OCR1A = SHORT_TRIAC_PULSE;
+        } else {
+            OCR1A = HALF_PERIOD_TICKS - TRIAC_OFF_BEFORE_TICKS - timerDelay;
+        }
     } else {
         triacOff();
 
         TCNT1 = 0;
-        OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
+        if (triacShortPulseMode) {
+            OCR1A = HALF_PERIOD_TICKS - SHORT_TRIAC_PULSE;
+        } else {
+            OCR1A = timerDelay + TRIAC_OFF_BEFORE_TICKS;
+        }
     }
 
     currentState++;
