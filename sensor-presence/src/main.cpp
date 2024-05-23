@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include <sensor.h>
-#include "MAX44009.h"
 #include <Wire.h>
+
+#ifndef NO_LIGHT_SENSOR
+#include "MAX44009.h"
+MAX44009 max44009;
+#endif
 
 #define PIN_LED 9
 #define PIN_INPUT 3
 
-MAX44009 max44009;
 Sensor sensor(false);
 
 void flashLed(uint8_t count)
@@ -42,6 +45,8 @@ void setup()
     Wire.begin();
 
     sensor.init();
+
+#ifndef NO_LIGHT_SENSOR
     if (!max44009.initialize())
     {
         // signal max44009 error
@@ -52,6 +57,7 @@ void setup()
             sensor.sleep(10000);
         }
     }
+#endif
 
     // signal end of setup
     flashLed(3);
@@ -68,21 +74,25 @@ void updateVoltage() {
     msg[1] = voltage / 10 - 100;
 }
 
-void updateLight() {
-    uint16_t light = max44009.getMeasurement();
-    msg[3] = light >> 8;
-    msg[4] = light;
-}
-
 void updateMotion() {
     uint8_t state = isMotionActive();
     msg[6] = state;
 }
 
+#ifndef NO_LIGHT_SENSOR
+void updateLight() {
+    uint16_t light = max44009.getMeasurement();
+    msg[3] = light >> 8;
+    msg[4] = light;
+}
+#endif
+
 void updateAll() {
     updateVoltage();
-    updateLight();
     updateMotion();
+#ifndef NO_LIGHT_SENSOR
+    updateLight();
+#endif
 }
 
 void loop()
