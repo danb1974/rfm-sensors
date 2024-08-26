@@ -36,13 +36,12 @@ void setup()
     }
   }
 
-  /* Default settings from datasheet. */
   bmp.setSampling(
-      Adafruit_BMP280::MODE_FORCED,   /* Operating mode */
-      Adafruit_BMP280::SAMPLING_X2,   /* Temperature oversampling */
-      Adafruit_BMP280::SAMPLING_X16,  /* Pressure oversampling */
-      Adafruit_BMP280::FILTER_X16,    /* Filtering */
-      Adafruit_BMP280::STANDBY_MS_500 /* Standby time */
+      Adafruit_BMP280::MODE_NORMAL,
+      Adafruit_BMP280::SAMPLING_X16,
+      Adafruit_BMP280::SAMPLING_X16,
+      Adafruit_BMP280::FILTER_X4,
+      Adafruit_BMP280::STANDBY_MS_1000
   );
 
   flashLed(3);
@@ -50,25 +49,22 @@ void setup()
 
 void loop()
 {
-  if (bmp.takeForcedMeasurement())
-  {
-    uint8_t msg[8] = {'B', 0, 'T', 0, 0, 'P', 0, 0};
+  uint8_t msg[8] = {'B', 0, 'T', 0, 0, 'P', 0, 0};
 
-    uint16_t voltage = sensor.readVoltage();
-    msg[1] = voltage / 10 - 100;
+  uint16_t voltage = sensor.readVoltage();
+  msg[1] = voltage / 10 - 100;
 
-    uint16_t temperature = round(bmp.readTemperature() * 256);
-    msg[3] = temperature >> 8;
-    msg[4] = temperature & 0xff;
+  uint16_t temperature = round(bmp.readTemperature() * 256);
+  msg[3] = temperature >> 8;
+  msg[4] = temperature & 0xff;
 
-    uint16_t pressure = round(bmp.readPressure() / 10);
-    msg[6] = pressure >> 8;
-    msg[7] = pressure & 0xff;
+  uint16_t pressure = round(bmp.readPressure() / 10);
+  msg[6] = pressure >> 8;
+  msg[7] = pressure & 0xff;
 
-    sensor.powerUp();
-    sensor.sendAndWait(msg, sizeof(msg));
-    sensor.powerDown();
-  }
+  sensor.powerUp();
+  sensor.sendAndWait(msg, sizeof(msg));
+  sensor.powerDown();
 
   sensor.sleep(60);
 }
