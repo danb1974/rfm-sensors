@@ -329,8 +329,11 @@ void zeroCross()
         currentState = 0;
     }
 
+    // compensate computing delay (from start of interrupt 'till now)
+    // 2 pulses = 1us
+    uint32_t delayPulses = (micros() - nowUs) * 2;
     TCNT1 = 0;
-    OCR1A = timerDelay;
+    OCR1A = timerDelay - delayPulses;
 }
 
 void setup()
