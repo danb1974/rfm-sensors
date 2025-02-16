@@ -226,7 +226,7 @@ void onData(const uint8_t *data, uint8_t length, uint8_t rssi)
                 powerCurveIndex = data[offset + 1] - 1;
 
                 triacShortPulseMode = 0;
-                if (powerCurveIndex > 128) {
+                if (powerCurveIndex >= 128) {
                     powerCurveIndex -= 128;
                     triacShortPulseMode = 1;
                 }
